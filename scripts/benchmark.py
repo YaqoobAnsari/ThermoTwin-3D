@@ -9,7 +9,7 @@ headline) and the gap to the geometry-blind **1-D clear-wall baseline** (H1).
 
 Writes ``results/block1_benchmark.json`` and a markdown leaderboard.
 
-    python scripts/benchmark.py --models fno cnn --epochs 200 --device cuda
+    python scripts/benchmark.py --models fno fno_physics cnn unet --epochs 200 --device cuda
 """
 
 from __future__ import annotations
@@ -27,10 +27,16 @@ from torch.utils.data import DataLoader
 from thermotwin.data.dataset import LOGK_MEAN, LOGK_STD, SyntheticFEMDataset
 from thermotwin.eval.building import effective_u_from_theta, u_value_report
 from thermotwin.eval.metrics import relative_l2
+from thermotwin.losses.heat_residual import heat_residual_loss
 from thermotwin.models.registry import build_model
 from thermotwin.utils.seed import seed_everything
 
 _REPO = Path(__file__).resolve().parents[1]
+
+# Some roster entries are an existing architecture trained with a PDE-residual term.
+# Maps roster name -> (model-config name, physics_weight). Default: itself, 0.0.
+_PHYSICS_WEIGHTS = {"fno_physics": 0.1}
+_CONFIG_ALIAS = {"fno_physics": "fno"}
 
 
 def _native_eval(model, val_root: Path, device) -> dict:
@@ -80,8 +86,12 @@ def _fv_solver_ms(val_root: Path, n: int = 16) -> float:
     for row in manifest["samples"][:n]:
         d = np.load(val_root / row["file"])
         k, dx0, dy = d["k"], d["dx0"], float(d["dy"])
-        bc = DirichletFilm(float(d["t_indoor"]), float(d["t_outdoor"]),
-                           r_lo=float(d["r_si"]), r_hi=float(d["r_se"]))
+        bc = DirichletFilm(
+            float(d["t_indoor"]),
+            float(d["t_outdoor"]),
+            r_lo=float(d["r_si"]),
+            r_hi=float(d["r_se"]),
+        )
         t0 = time.perf_counter()
         solve_steady_conduction(k, [dx0, dy], bc)
         ts.append(time.perf_counter() - t0)
@@ -89,8 +99,10 @@ def _fv_solver_ms(val_root: Path, n: int = 16) -> float:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--models", nargs="+", default=["fno", "cnn"])
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument("--models", nargs="+", default=["fno", "fno_physics", "cnn", "unet"])
     p.add_argument("--epochs", type=int, default=200)
     p.add_argument("--batch_size", type=int, default=32)
     p.add_argument("--lr", type=float, default=1e-3)
@@ -103,13 +115,19 @@ def main() -> None:
 
     device = a.device if (a.device == "cpu" or torch.cuda.is_available()) else "cpu"
     train_root, val_root = _REPO / a.train_root, _REPO / a.val_root
-    train_ds = SyntheticFEMDataset(train_root, a.target_width)
+
+    # The physics-informed entries need the per-cell physics bundle in each batch;
+    # share one dataset across the roster, returning the bundle if any model uses it.
+    any_physics = any(_PHYSICS_WEIGHTS.get(name, 0.0) > 0.0 for name in a.models)
+    train_ds = SyntheticFEMDataset(train_root, a.target_width, return_physics=any_physics)
 
     fv_ms = _fv_solver_ms(val_root)
     rows = []
     for name in a.models:
         seed_everything(a.seed)  # same init seed -> fair comparison
-        model_cfg = OmegaConf.load(_REPO / "configs" / "model" / f"{name}.yaml")
+        cfg_name = _CONFIG_ALIAS.get(name, name)
+        physics_weight = _PHYSICS_WEIGHTS.get(name, 0.0)
+        model_cfg = OmegaConf.load(_REPO / "configs" / "model" / f"{cfg_name}.yaml")
         model = build_model(model_cfg).to(device)
         n_params = sum(p.numel() for p in model.parameters())
         opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-5)
@@ -119,10 +137,14 @@ def main() -> None:
         t0 = time.perf_counter()
         for _ in range(a.epochs):
             model.train()
-            for x, y in loader:
-                x, y = x.to(device), y.to(device)
+            for batch in loader:
+                x, y = batch[0].to(device), batch[1].to(device)
                 opt.zero_grad()
-                loss = relative_l2(model(x), y)
+                pred = model(x)
+                loss = relative_l2(pred, y)
+                if physics_weight > 0.0:
+                    phys = {key: val.to(device) for key, val in batch[2].items()}
+                    loss = loss + physics_weight * heat_residual_loss(pred, **phys)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 opt.step()
@@ -147,7 +169,7 @@ def main() -> None:
     }
     (out / "block1_benchmark.json").write_text(json.dumps(report, indent=2))
     _write_markdown(out / "block1_benchmark.md", report)
-    print(f"\nwrote {out/'block1_benchmark.json'} and .md")
+    print(f"\nwrote {out / 'block1_benchmark.json'} and .md")
 
 
 def _write_markdown(path: Path, report: dict) -> None:

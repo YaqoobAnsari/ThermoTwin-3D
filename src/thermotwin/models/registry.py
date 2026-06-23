@@ -16,10 +16,11 @@ from torch import nn
 
 from .cnn import build_cnn
 from .fno import build_fno
+from .unet import build_unet
 
 __all__ = ["build_model", "WIRED_MODELS", "DEFERRED_MODELS"]
 
-WIRED_MODELS = ("fno", "cnn")
+WIRED_MODELS = ("fno", "cnn", "unet")
 # Vendored under vendored/; wire when point-cloud featurisation exists (Block 2).
 DEFERRED_MODELS = ("gino", "gnot", "transolver", "meshgraphnet", "deeponet", "pointnet2")
 
@@ -43,6 +44,13 @@ def build_model(model_cfg: Mapping) -> nn.Module:
     if name == "cnn":
         return build_cnn(
             in_channels=in_ch, out_channels=out_ch, hidden_channels=hidden, n_layers=n_layers
+        )
+    if name == "unet":
+        return build_unet(
+            in_channels=in_ch,
+            out_channels=out_ch,
+            base_channels=int(model_cfg.get("base_channels", 32)),
+            depth=int(model_cfg.get("depth", 2)),
         )
     if name in DEFERRED_MODELS:
         raise NotImplementedError(

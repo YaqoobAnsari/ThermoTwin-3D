@@ -22,4 +22,4 @@ echo "host=$(hostname)"
 "$ENV/bin/python" -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 
 srun "$ENV/bin/python" scripts/benchmark.py \
-    --models fno cnn --epochs 300 --batch_size 64 --device cuda "$@"
+    --models fno fno_physics cnn unet --epochs 300 --batch_size 64 --device cuda "$@"

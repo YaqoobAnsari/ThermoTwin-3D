@@ -1,0 +1,5 @@
+name: unet                 # 2-D U-Net — multiscale encoder/decoder control for Block 1
+in_channels: 3             # [log10(k), r_si, r_se]
+out_channels: 1            # dimensionless temperature field theta
+base_channels: 32          # encoder width at the finest level (doubles per level)
+depth: 2                   # number of downsampling levels

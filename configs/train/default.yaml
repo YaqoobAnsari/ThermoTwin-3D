@@ -7,3 +7,4 @@ scheduler: cosine
 grad_clip: 1.0
 log_every: 50
 ckpt_every: 10
+physics_weight: 0.0        # >0 adds physics_weight * steady-FV PDE residual loss

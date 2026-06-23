@@ -2,7 +2,9 @@
   "config": {
     "models": [
       "fno",
-      "cnn"
+      "fno_physics",
+      "cnn",
+      "unet"
     ],
     "epochs": 300,
     "batch_size": 64,
@@ -12,7 +14,7 @@
     "train_root": "data/processed/block1_train",
     "val_root": "data/processed/block1_val",
     "target_width": 48,
-    "fv_solver_ms_per_sample": 2.5602385285310447
+    "fv_solver_ms_per_sample": 2.551863275584765
   },
   "results": [
     {
@@ -21,11 +23,23 @@
       "u_mape": 4.854862173351417,
       "u_mae_clear_baseline": 0.11678154254332185,
       "u_improvement_x": 5.699887712446616,
-      "infer_ms_per_sample": 6.5538911512703635,
-      "speedup_vs_fv": 0.3906440417514082,
+      "infer_ms_per_sample": 4.6124226100801025,
+      "speedup_vs_fv": 0.553258773384698,
       "model": "fno",
       "params": 308193,
-      "train_time_s": 73.6
+      "train_time_s": 89.4
+    },
+    {
+      "field_rel_l2": 0.014334404539113166,
+      "u_mae": 0.021805443483320135,
+      "u_mape": 5.081902694319653,
+      "u_mae_clear_baseline": 0.11678154254332185,
+      "u_improvement_x": 5.355614190220565,
+      "infer_ms_per_sample": 2.8202872090332676,
+      "speedup_vs_fv": 0.9048239014137455,
+      "model": "fno_physics",
+      "params": 308193,
+      "train_time_s": 91.6
     },
     {
       "field_rel_l2": 0.01695843894412974,
@@ -33,11 +47,23 @@
       "u_mape": 5.514331569283583,
       "u_mae_clear_baseline": 0.11678154254332185,
       "u_improvement_x": 4.594517234386379,
-      "infer_ms_per_sample": 0.925782835111022,
-      "speedup_vs_fv": 2.7654849835534216,
+      "infer_ms_per_sample": 0.8756178322073538,
+      "speedup_vs_fv": 2.9143573619917573,
       "model": "cnn",
       "params": 74145,
-      "train_time_s": 68.0
+      "train_time_s": 82.6
+    },
+    {
+      "field_rel_l2": 0.01669801773459767,
+      "u_mae": 0.03425049520030418,
+      "u_mape": 9.07508361088225,
+      "u_mae_clear_baseline": 0.11678154254332185,
+      "u_improvement_x": 3.4096307764415825,
+      "infer_ms_per_sample": 1.17818133730907,
+      "speedup_vs_fv": 2.165934219780753,
+      "model": "unet",
+      "params": 466529,
+      "train_time_s": 83.4
     }
   ]
 }

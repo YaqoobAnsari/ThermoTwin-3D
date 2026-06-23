@@ -43,7 +43,11 @@ living document; update it (and add an ADR under `decisions/`) when a significan
   spectral/Fourier layers → decode to arbitrary query points) and the baseline operators
   (FNO, DeepONet, GNOT, Transolver, MeshGraphNet) + data-driven controls.
 - **`losses/`** — supervised field loss + the **PDE residual** (heat equation) and BC penalties
-  that make the prediction physics-consistent.
+  that make the prediction physics-consistent. ✅ `losses/heat_residual.py` — the
+  autograd twin of `physics/steady_fv`, evaluating the discrete FV steady operator
+  as a residual on the predicted θ (`mean(R_cell²)`); wired through
+  `configs/train.physics_weight` into both `scripts/train.py` and the benchmark's
+  `fno_physics` entry. See ADR `0003`.
 - **`calibration/`** — the inverse problem: differentiate through the forward twin to fit
   spatially-varying envelope properties to measured IR; carry uncertainty.
 - **`training/` · `eval/` · `viz/` · `utils/`** — loops/optimisers; the metric suite
@@ -87,9 +91,14 @@ living document; update it (and add an ADR under `decisions/`) when a significan
    **← run the GPU Block-1 sweep on Slurm (full epochs/batched) to sharpen the numbers.**
    NB: the login node kills sustained CPU training — Slurm only.
 6. ~~Baseline comparison wiring — registry + no-operator CNN control~~ ✅
-   `models/registry.py` + `models/cnn.py`; `model=fno`/`model=cnn` config-selectable.
-   Point-cloud operators registered as deferred (Block 2). **← run the FNO-vs-CNN
-   comparison on Slurm to populate the table.**
+   `models/registry.py` + `models/cnn.py` + `models/unet.py`;
+   `model=fno`/`model=cnn`/`model=unet` config-selectable. Point-cloud operators
+   registered as deferred (Block 2). **Block-1 GPU benchmark run** (300 epochs,
+   A100): FNO leads at field rel-L2 **0.0144**, U-MAE **0.0205 W/m²K**; the
+   physics-informed `fno_physics` (PDE-residual term, weight 0.1) ties on field
+   (0.0143) but not U-MAE; UNet/CNN trail. Every geometry-aware model beats the
+   geometry-blind 1-D clear-wall baseline (U-MAE 0.1168) by 3.4–5.7× (H1).
+   Leaderboard in `results/block1_benchmark.md`. See ADR `0003`.
 7. ~~`geometry/` SDF / point-cloud featurisation~~ ✅ (partial)
    `geometry/pointcloud.py` (area-weighted surface sampling → feature-tagged point
    cloud: position, normal, U-value, resistance, surface type) + `geometry/sdf.py`

@@ -94,6 +94,40 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
   `tests/test_geometry_featurize.py`. Adds `rtree` (trimesh spatial index).
   Caveat: real multi-zone envelopes aren't watertight as assembled — SDF distances
   exact, signs heuristic until mesh repair lands.
+- Physics-informed residual loss — `losses/heat_residual.py`: the autograd-enabled
+  twin of `physics/steady_fv`. It evaluates the same cell-centred finite-volume
+  steady operator as a *residual* on a predicted dimensionless field θ
+  (indoor air θ=1 / `r_si` lo face, outdoor air θ=0 / `r_se` hi face; adiabatic
+  lateral edges) and returns `mean(R_cell²)`, differentiable wrt θ and addable to
+  the training loss. Gated by `tests/test_heat_residual.py` (residual ~0 on GT,
+  gradient checks).
+- Second Block-1 baseline — `models/unet.py`: a 2-D multiscale encoder/decoder
+  (`configs/model/unet.yaml`, depth-2, 32 base channels) registered in
+  `models/registry.py` (`WIRED_MODELS` now `fno`/`cnn`/`unet`), so `model=unet`
+  is config-selectable under the one `(B,C,H,W)→(B,1,H,W)` contract. Gated by
+  `tests/test_unet.py`.
+- Dataset physics bundle — `data/dataset.py` gains `return_physics=True`: each
+  item additionally yields a `phys` dict `{k, dx0, dy, r_si, r_se}` of tensors on
+  the *same resampled grid* as `x`/`y`, the bundle `heat_residual_loss` needs to
+  evaluate the FV residual on the prediction. Off by default (data-only path
+  unchanged).
+- Physics integration in the training paths — `configs/train/default.yaml` adds
+  `physics_weight` (default `0.0`; `>0` adds `physics_weight · heat_residual_loss`).
+  `scripts/train.py` switches the dataset into physics mode and augments the loss
+  when the weight is positive; `scripts/benchmark.py` adds an `fno_physics` roster
+  entry (the FNO architecture trained with `physics_weight=0.1`) alongside the new
+  `unet`, sharing one physics-mode dataset across the roster.
+- Re-ran the Block-1 GPU benchmark (`results/block1_benchmark.{json,md}`, 300
+  epochs · batch 64 · seed 1337, A100). New leaderboard (field rel-L2 / U-MAE
+  [W/m²K] / U-MAPE / vs 1-D clear):
+  - `fno_physics` — 0.0143 / 0.0218 / 5.1% / 5.36×
+  - `fno`         — 0.0144 / 0.0205 / 4.9% / 5.70×
+  - `unet`        — 0.0167 / 0.0343 / 9.1% / 3.41×
+  - `cnn`         — 0.0170 / 0.0254 / 5.5% / 4.59×
+  Every geometry-aware model clears the geometry-blind 1-D clear-wall baseline
+  (U-MAE 0.1168 W/m²K) by 3.4–5.7× (H1). The PDE-residual term shaves field
+  rel-L2 marginally (0.0144→0.0143) but does not improve U-MAE at this weight; see
+  ADR `0003`.
 - Conda env on project disk (`/data/gpfs/projects/punim2769/envs/thermotwin`):
   Python 3.10 + PyTorch 2.5.1/CUDA 12.1 + neuraloperator 2.0 + geometry/IO stack,
   via `scripts/setup_env.sh`.

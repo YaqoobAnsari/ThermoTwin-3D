@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 
 from thermotwin.data.dataset import SyntheticFEMDataset
 from thermotwin.eval.metrics import relative_l2, rmse
+from thermotwin.losses.heat_residual import heat_residual_loss
 from thermotwin.models.registry import build_model
 from thermotwin.utils.seed import seed_everything
 
@@ -31,7 +32,8 @@ _REPO = Path(__file__).resolve().parents[1]
 def evaluate(model, loader, device) -> dict[str, float]:
     model.eval()
     rl2, rms, n = 0.0, 0.0, 0
-    for x, y in loader:
+    for batch in loader:
+        x, y = batch[0], batch[1]
         x, y = x.to(device), y.to(device)
         pred = model(x)
         bs = x.shape[0]
@@ -47,8 +49,15 @@ def main(cfg: DictConfig) -> None:
     device = cfg.device if (cfg.device == "cpu" or torch.cuda.is_available()) else "cpu"
     print(f"device={device}  model={cfg.model.name}")
 
+    physics_weight = float(cfg.train.get("physics_weight", 0.0))
+    use_physics = physics_weight > 0.0
+    if use_physics:
+        print(f"physics-informed: physics_weight={physics_weight}")
+
     # Data roots are repo-relative; resolve against the repo, not Hydra's job dir.
-    train_ds = SyntheticFEMDataset(_REPO / cfg.data.train_root, cfg.data.target_width)
+    train_ds = SyntheticFEMDataset(
+        _REPO / cfg.data.train_root, cfg.data.target_width, return_physics=use_physics
+    )
     val_ds = SyntheticFEMDataset(_REPO / cfg.data.val_root, cfg.data.target_width)
     train_loader = DataLoader(
         train_ds, batch_size=cfg.train.batch_size, shuffle=True, num_workers=cfg.data.num_workers
@@ -67,10 +76,14 @@ def main(cfg: DictConfig) -> None:
     for epoch in range(cfg.train.epochs):
         model.train()
         running = 0.0
-        for x, y in train_loader:
-            x, y = x.to(device), y.to(device)
+        for batch in train_loader:
+            x, y = batch[0].to(device), batch[1].to(device)
             opt.zero_grad()
-            loss = relative_l2(model(x), y)
+            pred = model(x)
+            loss = relative_l2(pred, y)
+            if use_physics:
+                phys = {key: val.to(device) for key, val in batch[2].items()}
+                loss = loss + physics_weight * heat_residual_loss(pred, **phys)
             loss.backward()
             if cfg.train.grad_clip:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.train.grad_clip)
