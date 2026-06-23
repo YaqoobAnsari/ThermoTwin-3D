@@ -15,6 +15,7 @@ trimesh
 pyvista
 meshio
 open3d                # heavier; pin/replace if Spartan build is troublesome
+rtree                 # spatial index for trimesh signed-distance (SDF featuriser)
 h5py
 
 # FEM ground truth (pick per machine)

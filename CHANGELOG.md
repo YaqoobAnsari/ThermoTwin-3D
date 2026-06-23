@@ -78,6 +78,14 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
   point-cloud operators (GINO/GNOT/Transolver/MeshGraphNet/DeepONet/PointNet++) are
   registered as explicit "deferred" (Block-2 competitors on irregular geometry) and
   raise loudly rather than silently. Gated by `tests/test_registry.py` (43 tests total).
+- Geometry featurisation for the operator (Stage-1 input) — `geometry/pointcloud.py`
+  (area-weighted surface sampling into a feature-tagged point cloud: position,
+  normal, U-value, resistance, surface type) + `geometry/sdf.py` (envelope→mesh,
+  signed distance, regular SDF grid). The point cloud + SDF are GINO's native input.
+  Validated on the real DOE SmallOffice (8k points, 24³ SDF). Gated by
+  `tests/test_geometry_featurize.py`. Adds `rtree` (trimesh spatial index).
+  Caveat: real multi-zone envelopes aren't watertight as assembled — SDF distances
+  exact, signs heuristic until mesh repair lands.
 - Conda env on project disk (`/data/gpfs/projects/punim2769/envs/thermotwin`):
   Python 3.10 + PyTorch 2.5.1/CUDA 12.1 + neuraloperator 2.0 + geometry/IO stack,
   via `scripts/setup_env.sh`.

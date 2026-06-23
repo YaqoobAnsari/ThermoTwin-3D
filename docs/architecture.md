@@ -90,5 +90,11 @@ living document; update it (and add an ADR under `decisions/`) when a significan
    `models/registry.py` + `models/cnn.py`; `model=fno`/`model=cnn` config-selectable.
    Point-cloud operators registered as deferred (Block 2). **← run the FNO-vs-CNN
    comparison on Slurm to populate the table.**
-7. `geometry/` SDF / point-cloud featurisation, then `models/gino.py` — the bridge to
-   real scans (Block 2); wire the deferred operators there.
+7. ~~`geometry/` SDF / point-cloud featurisation~~ ✅ (partial)
+   `geometry/pointcloud.py` (area-weighted surface sampling → feature-tagged point
+   cloud: position, normal, U-value, resistance, surface type) + `geometry/sdf.py`
+   (envelope→mesh, signed distance, SDF grid). Validated on the real DOE SmallOffice.
+   *Caveat:* real multi-zone envelopes aren't watertight as assembled, so SDF
+   distances are exact but signs are heuristic — needs mesh repair / a closed shell
+   before relying on the sign. **← next: `models/gino.py` consuming (point cloud +
+   SDF), then wire the deferred operators (GNOT/Transolver/...) for Block 2.**
