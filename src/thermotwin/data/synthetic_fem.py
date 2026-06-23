@@ -156,16 +156,24 @@ def random_sample(rng: np.random.Generator) -> WallSample:
     t_out = float(rng.uniform(-12.0, 8.0))
     r_si = float(rng.choice([0.10, 0.13, 0.17]))
 
-    # Bridges puncture the insulation layer (the 2nd or 3rd layer for these walls).
+    # Bridges puncture the INSULATION — the lowest-conductivity layer — so a bridge
+    # is always a more-conductive path than what it replaces (a genuine thermal
+    # bridge that raises U). Targeting the *thickest* layer was a bug: for the mass
+    # wall that is structural concrete, where a low-k timber inclusion would instead
+    # lower U. See ADR 0006.
+    conductivities = np.array([layer.conductivity_w_mk for layer in layers])
     thicknesses = np.array([layer.thickness_m for layer in layers])
     edges = np.concatenate([[0.0], np.cumsum(thicknesses)])
-    insul_idx = int(np.argmax(thicknesses))  # the thickest layer ~ the insulation
+    insul_idx = int(np.argmin(conductivities))  # the insulation layer
     x_lo, x_hi = edges[insul_idx], edges[insul_idx + 1]
+    insul_k = float(conductivities[insul_idx])
+    # Only materials strictly more conductive than the insulation are real bridges.
+    bridge_materials = [v for v in _BRIDGE_K.values() if v > insul_k] or list(_BRIDGE_K.values())
 
     n_bridges = int(rng.integers(0, 4))
     bridges = []
     for _ in range(n_bridges):
-        bk = float(_BRIDGE_K[rng.choice(list(_BRIDGE_K))])
+        bk = float(rng.choice(bridge_materials))
         bw = float(rng.uniform(0.02, 0.08))  # bridge width along wall
         y0 = float(rng.uniform(0.0, max(width - bw, 0.0)))
         bridges.append(ThermalBridge(x_lo, x_hi, y0, y0 + bw, bk))

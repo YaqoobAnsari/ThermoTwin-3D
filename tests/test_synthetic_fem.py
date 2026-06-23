@@ -76,3 +76,13 @@ def test_corpus_is_deterministic_and_well_formed():
         assert ra["temperature"].shape == ra["k"].shape
         assert ra["u_value"] >= ra["u_clear"] - 1e-4  # bridges never reduce U
         assert ra["k"].dtype == np.float32
+
+
+def test_bridges_are_genuine_and_raise_u():
+    """After the insulation-targeting fix, bridges puncture the lowest-conductivity
+    layer and are always more conductive than it, so effective U is never below the
+    clear-wall U for any generated sample (no thermal-break artefacts). See ADR 0006."""
+    corpus = generate_corpus(48, seed=7)
+    assert sum(int(r["n_bridges"]) > 0 for r in corpus) > 0  # some samples have bridges
+    for r in corpus:
+        assert float(r["u_value"]) >= float(r["u_clear"]) - 1e-9
