@@ -1,8 +1,14 @@
 # @package _global_
 # Experiment Block 1 — controlled synthetic FEM benchmark.
+# Default model: delta_fno — the ablation winner (ADR 0004), predicting a correction
+# on the analytic 1-D theta prior; it more than halves U-value MAE vs data-only FNO.
+# It requires the 'enriched' feature set (the prior is input channel 3).
 defaults:
   - override /data: synthetic_fem
-  - override /model: fno          # FNO on the regular synthetic grid; GINO arrives with point clouds (Block 2)
+  - override /model: delta_fno
   - override /physics: heat_conduction
 
-tags: [block1, synthetic, fem-benchmark]
+data:
+  feature_set: enriched
+
+tags: [block1, synthetic, fem-benchmark, delta-fno]

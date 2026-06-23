@@ -7,6 +7,17 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **`docs/experiments.md`** — the running, paper-grade record of every experiment:
+  setup, **all** variants (winners and losers), numbers, and conclusions, with raw
+  artefacts in `results/*.json`/`*.md`. Consolidates Exp 1.1 (first benchmark),
+  Exp 1.2 (physics loss + UNet), and Exp 1.3 (the 8-variant model ablation).
+- **Adopted `delta_fno` as the Block-1 experimental default** (ADR 0004 winner):
+  `configs/experiment/block1_synthetic_fem.yaml` now composes `model=delta_fno` with
+  the `enriched` feature set. `feature_set` threaded through `configs/data`,
+  `scripts/train.py`, and `scripts/evaluate.py` (the latter now featurises via the
+  shared `build_input_channels`, so any model's channels are built correctly at
+  native-resolution eval). The other seven ablation variants stay registered and
+  config-selectable as competitive alternatives.
 - Professional repository skeleton: `src/thermotwin/` package with one subpackage per
   pipeline stage (`geometry`, `physics`, `data`, `models`, `losses`, `calibration`,
   `training`, `eval`, `viz`, `utils`).

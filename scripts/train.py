@@ -55,10 +55,16 @@ def main(cfg: DictConfig) -> None:
         print(f"physics-informed: physics_weight={physics_weight}")
 
     # Data roots are repo-relative; resolve against the repo, not Hydra's job dir.
+    feature_set = cfg.data.get("feature_set", "base")
     train_ds = SyntheticFEMDataset(
-        _REPO / cfg.data.train_root, cfg.data.target_width, return_physics=use_physics
+        _REPO / cfg.data.train_root,
+        cfg.data.target_width,
+        return_physics=use_physics,
+        feature_set=feature_set,
     )
-    val_ds = SyntheticFEMDataset(_REPO / cfg.data.val_root, cfg.data.target_width)
+    val_ds = SyntheticFEMDataset(
+        _REPO / cfg.data.val_root, cfg.data.target_width, feature_set=feature_set
+    )
     train_loader = DataLoader(
         train_ds, batch_size=cfg.train.batch_size, shuffle=True, num_workers=cfg.data.num_workers
     )

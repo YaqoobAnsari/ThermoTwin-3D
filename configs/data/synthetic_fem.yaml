@@ -2,5 +2,6 @@ name: synthetic_fem        # FEM heat-conduction fields generated over wall cros
 train_root: data/processed/block1_train
 val_root: data/processed/block1_val
 target_width: 48           # along-wall resampling width (through-wall axis is fixed-size)
+feature_set: base          # input channels: 'base' (3ch) or 'enriched' (6ch, adds the 1-D theta prior)
 num_workers: 2
 # Generate with: python scripts/generate_fem_groundtruth.py --name block1_train

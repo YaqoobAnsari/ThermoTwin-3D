@@ -21,7 +21,7 @@ import numpy as np
 import torch
 from omegaconf import DictConfig
 
-from thermotwin.data.dataset import LOGK_MEAN, LOGK_STD
+from thermotwin.data.dataset import build_input_channels
 from thermotwin.eval.building import effective_u_from_theta, u_value_report
 from thermotwin.eval.metrics import relative_l2
 from thermotwin.models.registry import build_model
@@ -30,14 +30,17 @@ from thermotwin.utils.seed import seed_everything
 _REPO = Path(__file__).resolve().parents[1]
 
 
-def _native_input(d) -> tuple[torch.Tensor, np.ndarray, dict]:
-    """Build the model input at a sample's native resolution + carry GT scalars."""
+def _native_input(d, feature_set: str = "base") -> tuple[torch.Tensor, np.ndarray, dict]:
+    """Build the model input at a sample's native resolution + carry GT scalars.
+
+    Uses the same featuriser as training (``build_input_channels``), so models that
+    need the enriched channels (e.g. ``delta_fno``) are evaluated correctly.
+    """
     k = d["k"].astype(np.float32)
     t_in, t_out = float(d["t_indoor"]), float(d["t_outdoor"])
     r_si, r_se = float(d["r_si"]), float(d["r_se"])
     theta_gt = (d["temperature"].astype(np.float32) - t_out) / (t_in - t_out)
-    logk = (np.log10(k) - LOGK_MEAN) / LOGK_STD
-    x = np.stack([logk, np.full_like(logk, r_si), np.full_like(logk, r_se)])[None]
+    x = build_input_channels(k, d["dx0"], float(d["dy"]), r_si, r_se, feature_set)[None]
     meta = {
         "k": k,
         "dx0": d["dx0"],
@@ -65,12 +68,13 @@ def main(cfg: DictConfig) -> None:
 
     val_root = _REPO / cfg.data.val_root
     manifest = json.loads((val_root / "manifest.json").read_text())
+    feature_set = cfg.data.get("feature_set", "base")
 
     rel_l2s, u_pred, u_true, u_clear = [], [], [], []
     with torch.no_grad():
         for row in manifest["samples"]:
             d = np.load(val_root / row["file"])
-            x, theta_gt, m = _native_input(d)
+            x, theta_gt, m = _native_input(d, feature_set)
             pred = model(x.to(device))[0, 0].cpu().numpy()
             rel_l2s.append(
                 relative_l2(
