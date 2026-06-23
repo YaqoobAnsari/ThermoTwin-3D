@@ -1,11 +1,17 @@
 """Model registry — build any baseline from its config behind one contract.
 
-Every model maps ``(B, C, H, W) -> (B, out, H, W)``. The Block-1 benchmark compares
-the FNO operator against a no-spectral CNN control. The vendored point-cloud
-operators (GNOT, Transolver, MeshGraphNet, PointNet++) consume irregular geometry,
-not grids — they enter as Block-2 competitors once the SDF / point-cloud
-featuriser lands, so they are registered here as explicit "not yet wired" to fail
-loudly rather than silently.
+The grid models map ``(B, C, H, W) -> (B, out, H, W)``. The Block-1 benchmark compares
+the FNO operator against a no-spectral CNN control.
+
+The geometry-conditioned operators (``gino``, ``delta_gino``) consume *irregular
+point clouds*, not grids: their forward is
+``(input_geom, x, latent_queries, sdf, output_queries) -> (B, n_out, 1)`` and cannot
+honour the ``(B, C, H, W)`` grid contract. They are therefore built via
+:func:`build_gino` / :func:`build_delta_gino` (exposed here and re-exported) and called
+directly by the Block-2 runner. Routing them through :func:`build_model` raises with a
+pointer to those builders, so the grid path stays clean and fails loudly rather than
+silently mis-shaping a point-cloud model. The remaining vendored point-cloud operators
+(GNOT, Transolver, MeshGraphNet, PointNet++) are likewise registered as "not yet wired".
 """
 
 from __future__ import annotations
@@ -17,14 +23,27 @@ from torch import nn
 from .cnn import build_cnn
 from .delta_fno import build_delta_fno
 from .fno import build_fno
+from .gino import DeltaGino, GinoOperator, build_delta_gino, build_gino
 from .ufno import build_ufno
 from .unet import build_unet
 
-__all__ = ["build_model", "WIRED_MODELS", "DEFERRED_MODELS"]
+__all__ = [
+    "build_model",
+    "build_gino",
+    "build_delta_gino",
+    "GinoOperator",
+    "DeltaGino",
+    "WIRED_MODELS",
+    "GEOMETRY_MODELS",
+    "DEFERRED_MODELS",
+]
 
 WIRED_MODELS = ("fno", "cnn", "unet", "delta_fno", "ufno")
-# Vendored under vendored/; wire when point-cloud featurisation exists (Block 2).
-DEFERRED_MODELS = ("gino", "gnot", "transolver", "meshgraphnet", "deeponet", "pointnet2")
+# Geometry-conditioned operators: implemented in models/gino.py, built directly via
+# build_gino / build_delta_gino (point-cloud forward, not the grid contract).
+GEOMETRY_MODELS = ("gino", "delta_gino")
+# Vendored under vendored/; wire when point-cloud featurisation exists (Block 2+).
+DEFERRED_MODELS = ("gnot", "transolver", "meshgraphnet", "deeponet", "pointnet2")
 
 
 def build_model(model_cfg: Mapping) -> nn.Module:
@@ -82,9 +101,20 @@ def build_model(model_cfg: Mapping) -> nn.Module:
             base_channels=int(model_cfg.get("base_channels", 32)),
             depth=int(model_cfg.get("depth", 2)),
         )
+    if name in GEOMETRY_MODELS:
+        raise NotImplementedError(
+            f"model '{name}' is a geometry-conditioned operator with a point-cloud "
+            f"forward (input_geom, x, latent_queries, sdf, output_queries) -> (B, n_out, 1); "
+            f"it does not fit build_model's (B, C, H, W) grid contract. Build it directly "
+            f"with thermotwin.models.{'build_delta_gino' if name == 'delta_gino' else 'build_gino'} "
+            f"and call it from the Block-2 runner. Grid models: {WIRED_MODELS}."
+        )
     if name in DEFERRED_MODELS:
         raise NotImplementedError(
             f"model '{name}' is vendored but not yet wired — it consumes point clouds, "
             f"not grids (Block 2). Wired models: {WIRED_MODELS}."
         )
-    raise KeyError(f"unknown model '{name}'. Wired: {WIRED_MODELS}; deferred: {DEFERRED_MODELS}.")
+    raise KeyError(
+        f"unknown model '{name}'. Grid: {WIRED_MODELS}; geometry: {GEOMETRY_MODELS}; "
+        f"deferred: {DEFERRED_MODELS}."
+    )

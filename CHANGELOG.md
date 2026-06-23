@@ -222,6 +222,53 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
     the PDE-residual loss stays a low-data consistency rail, **not** re-enabled by
     default. Mandate for Block-2 GINO: make the **assembly/material-layer encoding**
     the design and OOD-evaluation focus.
+- **Block-2 — the delta prior goes 3-D on a geometry-conditioned operator (GINO).**
+  ADR [`0007`](docs/decisions/0007-block2-gino-3d.md); Exp 2.1 in `docs/experiments.md`.
+  Carries the Block-1 winning recipe (additive correction on a hard analytic 1-D
+  clear-wall θ prior) off the regular grid and onto irregular point clouds, toward real
+  as-built scans. New machinery:
+  - `models/gino.py` (`configs/model/gino.yaml`, `delta_gino.yaml`) — `GinoOperator`,
+    a thin wrapper over `neuralop.models.GINO` fixing the verified-good construction
+    (`in_gno_transform_type="nonlinear"` so the per-point feature width is decoupled
+    from the FNO latent width — the trap that otherwise `RuntimeError`s when
+    `in_channels ≠ fno_in_channels`; the SDF wired in as `latent_features`;
+    `gno_use_torch_scatter=False`), and `DeltaGino`, which predicts
+    `query_prior + correction` with the 1-D prior supplied per output query (the
+    `delta_fno` recipe on scattered geometry). Registered in `models/registry.py`.
+  - `data/synthetic_3d.py` + `scripts/generate_3d_gt.py` — exact 3-D ground truth:
+    layered wall *blocks* punctured by **rectangular-prism** thermal bridges (finite in
+    both in-plane axes; target the insulation layer, ADR `0006`), solved by the existing
+    N-dimensional `physics/steady_fv` (axis-0 Dirichlet/film, others adiabatic). Each
+    block → a GINO sample: ~2k interior points with features
+    `[logk_std, r_si, r_se, theta1d]`, per-point target θ (trilinear from the FV field),
+    and the analytic box SDF on a `16³` latent grid. Corpus
+    `data/processed/block2_{train,val}` (96 / 32, seeded).
+  - `data/pointcloud_dataset.py` — torch dataset + `collate_pointcloud` +
+    `latent_grid_coords`, serving the cloud (and optional dense voxelisation) the
+    point-cloud and grid models consume.
+  - `eval/building.u_from_indoor_face_cloud` — a leakage-free U-value estimator for
+    scattered/voxel 3-D fields: the indoor-face dimensionless-deficit ratio against the
+    analytic prior, `U ≈ U_clear · mean(1−θ_face)/mean(1−θ1d_face)`, **exact on a clear
+    column** and applied identically to every model and to the ground truth.
+  - `scripts/benchmark_block2.py` + `scripts/slurm/block2.slurm` — the 3-D benchmark
+    over `delta_gino` (prior fed + added back), `gino` (data-only, prior dropped) and
+    `fno_voxel` (the regular-grid reference, resampled back to the cloud so all three are
+    scored on the **same point support** with the same U estimator) × seeds `[1337, 1]` ×
+    150 epochs → `results/block2_benchmark.{json,md}` (whitelisted in `.gitignore`).
+  - **Real-geometry on-ramp** — `geometry/citygml.py`: a stdlib-only TUM2TWIN CityGML 2.0
+    reader lifting LoD2/LoD3 buildings into our `Envelope` (thematic surfaces → Wall/Roof/
+    Floor, local-metric coords, default per-type material library, truncated-file
+    skip/log; LoD3 window/door holes dropped for v1). All 27 LoD2 buildings parse
+    (899 surfaces, 0 skipped); the envelope feeds the existing point-cloud + SDF
+    featuriser unchanged. Gated by `tests/test_citygml.py` (9/9).
+  - Gated by `tests/test_gino.py`, `tests/test_pointcloud_dataset.py`,
+    `tests/test_synthetic_3d.py`, `tests/test_citygml.py`.
+  - **Headline numbers: pending — not fabricated.** The benchmark (Slurm job
+    `26440168`, A100) is still running at time of writing and has produced no per-seed
+    result; `results/block2_benchmark.{json,md}` will be backfilled with the field
+    rel-L2 / U-MAE (mean ± std) once the job finishes, settling (1) whether the delta
+    prior carries to 3-D (`delta_gino` vs data-only `gino`) and (2) GINO vs the
+    voxel-FNO grid baseline on the same point support.
 
 ### Changed
 - **Renamed the project `BuildTrust-3D` → `ThermoTwin-3D`** to match the thermal-twin thesis

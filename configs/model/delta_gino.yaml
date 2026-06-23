@@ -1,6 +1,6 @@
-name: gino                 # Geometry-Informed Neural Operator (Block-2 primary backbone)
+name: delta_gino           # GINO that predicts a correction on the analytic 1-D theta prior
 in_channels: 4             # per-point features: [logk_std, r_si, r_se, theta1d]
-out_channels: 1            # dimensionless temperature field theta
+out_channels: 1            # dimensionless temperature field theta (must be 1 for delta learning)
 gno_coord_dim: 3           # 3-D as-built geometry
 fno_in_channels: 32        # latent (FNO) channel width; free of in_channels (nonlinear in-GNO)
 fno_n_modes: [8, 8, 8]     # retained Fourier modes per latent axis; each must be < latent_grid // 2
@@ -13,5 +13,6 @@ latent_feature_channels: 1 # the SDF, fed on the latent grid as latent_features
 in_gno_transform_type: nonlinear   # decouples feature width from latent width (the verified fix)
 out_gno_transform_type: linear
 gno_use_open3d: true
-# NOTE: not built via build_model (point-cloud forward, not the grid contract).
-# The Block-2 runner calls thermotwin.models.build_gino(**model_cfg) directly.
+# Forward = query_prior + gino_correction. query_prior is the analytic 1-D theta at each
+# output query's through-wall coordinate, supplied per-query by the Block-2 dataset
+# (mirrors delta_fno's additive structure). Built via thermotwin.models.build_delta_gino.

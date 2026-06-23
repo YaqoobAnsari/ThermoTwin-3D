@@ -239,9 +239,108 @@ headline stressor**, keep the PDE-residual loss only as a low-data consistency r
 
 ---
 
-## Block 2 — real-building validation (in progress)
+## Block 2 — 3-D geometry-conditioned operator (GINO + delta prior)
 
-Wiring the geometry-conditioned operator (GINO) onto the point-cloud + SDF featuriser
-(`geometry/pointcloud.py`, `geometry/sdf.py`) for validation against measured thermal
-data (TUM2TWIN, TBBR). See [`experiment-plan.md`](experiment-plan.md). Results here as
-they land.
+Block-1 settled the *recipe* — a hard analytic 1-D clear-wall θ prior wired into the
+architecture as an additive correction (`delta_fno`) — and proved it **travels**
+(Exp 1.4: lowest U-MAE and smallest generalization gap on all 8 OOD cells, 1.9–5.0×
+ahead). Block-2's question is whether that recipe **carries off the regular grid** onto
+the irregular point clouds of real as-built scans, with **GINO** (Li et al., 2023) as
+the geometry-conditioned backbone. Two strands:
+
+1. **A synthetic 3-D benchmark** (Exp 2.1) that keeps the physics exact and the
+   geometry simple enough to isolate the operator's behaviour: does the delta prior
+   still beat a data-only GINO, and does either point-cloud operator match a
+   regular-grid voxel-FNO that *does* see a grid?
+2. **A real-geometry on-ramp** — a CityGML reader that lifts TUM2TWIN LoD2/LoD3 city
+   models into the same `Envelope` the featuriser already consumes, so the operator can
+   be exercised on genuine tessellated shells (thermal labels still gated on measured
+   IR; see *Limitations*).
+
+ADR [`0007`](decisions/0007-block2-gino-3d.md). See also [`experiment-plan.md`](experiment-plan.md).
+
+### Exp 2.1 — GINO vs delta-GINO vs voxel-FNO on 3-D wall blocks (2 seeds, A100, 150 ep)
+
+**Corpus.** `data/synthetic_3d.py` is the 3-D analogue of the Block-1 generator: a wall
+*block* layered through axis 0 (the through-wall direction), homogeneous across the two
+in-plane axes, punctured by **rectangular-prism** thermal bridges that are now finite in
+*both* in-plane axes (a stud/nib, not a 2-D strip) and target the insulation layer
+(ADR `0006`). Each block is solved by `physics/steady_fv` (axis-0 Dirichlet/film, all
+other faces adiabatic) into a genuinely 3-D θ field, then turned into a **GINO sample**:
+~2k points drawn uniformly inside the block (coords normalised to `[0,1]³`), each carrying
+features `[logk_std, r_si, r_se, theta1d]` (the analytic 1-D prior evaluated at the point's
+through-wall position from its local k-column), the per-point target θ (trilinearly
+interpolated from the FV field), and the analytic box SDF on a regular `G³` (G=16) latent
+grid. Train 96 / val 32 samples, seeded. Artefact: `data/processed/block2_{train,val}`.
+
+**Roster** (all kept — alternatives are part of the record):
+
+| Model | Features | Structure | Role |
+|---|---|---|---|
+| **delta_gino** | `[logk_std, r_si, r_se, theta1d]` (4) | predicts a *correction* added to the per-query 1-D prior | the Block-1 winning recipe, now on irregular geometry |
+| gino | `[logk_std, r_si, r_se]` (3, **prior dropped**) | predicts θ directly from the cloud | data-only ablation — must learn θ from scratch |
+| fno_voxel | voxelised `[logk_std, r_si, r_se, theta1d]` (4) | 3-D FNO over the dense `16³` voxel field | the regular-grid reference the cloud operators must match without seeing a grid |
+
+All three score **field relative-L2** and **U-value MAE** on the **same support** — the
+original sampled points (the voxel field is trilinearly resampled back to the cloud) —
+with the **same U-from-indoor-face estimator** (`eval/building.u_from_indoor_face_cloud`,
+near-face band 0.08 in normalised coords) applied identically to every model and to the
+ground truth. U is read as the indoor-face dimensionless-deficit ratio against the
+analytic prior: `U ≈ U_clear · mean(1−θ_face) / mean(1−θ1d_face)` — exact on a clear
+column (where θ ≡ θ1d ⇒ U = U_clear), so it estimates only the bridge-driven excess and
+never touches the target U (leakage-free). Each model is run over seeds `[1337, 1]`,
+150 epochs, AdamW + cosine, batch 1. Runner: `scripts/benchmark_block2.py` →
+`results/block2_benchmark.{json,md}`.
+
+#### Results — **pending** (benchmark in flight)
+
+> **Honest status (2026-06-24): no numbers yet.** The producing Slurm job
+> **26440168** (`tt3d-block2`, A100 `spartan-gpgpu120`, CUDA confirmed) is **still
+> running** inside its 3-h allocation and has not yet emitted a single per-seed result
+> line; `benchmark_block2.py` writes `results/block2_benchmark.{json,md}` only after all
+> 6 runs (3 models × 2 seeds) finish, so the artefact does not exist. **No values are
+> reported here rather than fabricated.** The harness is verified to answer the two
+> questions below once it lands; this section will be filled from the real JSON.
+
+What the numbers will decide, and the bar each must clear:
+
+- **Did the delta prior carry to 3-D?** → `delta_prior_carries_to_3d = TRUE` iff
+  `delta_gino`'s field rel-L2 **and** U-MAE are materially below `gino`'s (the data-only
+  operator with the prior dropped), mirroring the Block-1 `delta_fno` win. If the gap is
+  within seed σ, the honest read is that the additive prior helps less on the cloud than
+  it did on the grid, and that finding gets reported as-is.
+- **GINO vs voxel-FNO.** → GINO "justifies itself" only if `delta_gino`'s rel-L2 and
+  U-MAE are ≤ `fno_voxel`'s **despite never seeing a grid**. If the voxel-FNO ties or
+  wins on these simple box geometries, the honest conclusion is that a voxel-FNO suffices
+  *here* and GINO's value must be argued on irregular/real scans (Exp 2.2+), not synthetic
+  blocks — the grid baseline is in the roster precisely to keep us honest about that.
+- **The bar both geometry-aware models must beat (H1):** the geometry-blind 1-D
+  clear-wall U-MAE (`u_mae_clear_baseline`), reported alongside every row.
+
+### CityGML real-geometry ingestion (TUM2TWIN) — landed
+
+`geometry/citygml.py` lifts a TUM2TWIN CityGML 2.0 building (EPSG:25832, parsed with
+stdlib `xml.etree` — no lxml/pyproj) into our `Envelope`: each `bldg:boundedBy` thematic
+surface (`WallSurface`/`RoofSurface`/`GroundSurface` → Wall/Roof/Floor, boundary
+Outdoors/Ground), its `gml:posList` exterior rings read to `(n,3)` vertices (closing
+duplicate dropped), coordinates made **local-metric** by subtracting the per-building min
+corner. LoD2 gives one clean polygon per surface; LoD3 tessellates into many triangles
+(one `Surface` per exterior ring, synthesised names) and carries window/door holes as
+interior rings (**dropped for v1** — treated as opaque wall). A truncated file
+(e.g. `DEBY_LOD3_4907506.gml`) makes `ET.parse` raise; the single-building API re-raises
+a clear error, the directory API skips-and-logs.
+
+CityGML carries **geometry only**, so each surface is paired with a material/construction
+from a small default library keyed by surface type (plausible mid-European constructions,
+**not measured values** — placeholders until real material assignment lands). The
+resulting `Envelope` flows **unchanged** into `geometry/pointcloud.py` (feature-tagged
+cloud) and `geometry/sdf.py` (mesh + SDF), exactly as the synthetic DOE/IDF envelopes do.
+
+Status: **all 27 LoD2 buildings parse** (0 skipped, 899 surfaces total). Sample
+`DEBY_LOD2_4906980`: 7 surfaces (5 Wall, 1 Roof, 1 Floor), 6 Outdoors + 1 Ground,
+local-metric (max |coord| ~12 m), watertight shell mesh (`is_watertight=True`), envelope
+UA ~62.4 W/K, feeds the point cloud (512 finite points) and SDF unchanged. Gated by
+`tests/test_citygml.py` (9/9: poslist parsing incl. ragged-input rejection, inline-CityGML
+lift to Envelope, truncated-file error, directory skip-and-log, and three integration
+tests on the real LoD2 corpus). LoD3 (`.gml` files 3–80 MB) is handled by the same
+code path but not exercised in the local <30 s test budget.
