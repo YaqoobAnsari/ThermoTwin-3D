@@ -21,6 +21,10 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
   `generate_fem_groundtruth.py`) and Spartan Slurm templates (`scripts/slurm/`).
 - Smoke test and `data/` / `results/` / `experiments/` / `notebooks/` scaffolding.
 - Initialised git repository (branch `main`).
+- First physics slice — `physics/conduction.py`: closed-form 1-D multilayer
+  steady-state conduction (U-value, heat flux, full temperature profile, EN ISO 6946
+  surface films) with closed-form unit tests. The analytic oracle and first
+  ground-truth source for `eval/`.
 
 ### Changed
 - **Renamed the project `BuildTrust-3D` → `ThermoTwin-3D`** to match the thermal-twin thesis
