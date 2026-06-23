@@ -24,9 +24,26 @@ from .pointcloud import triangulate_polygon
 __all__ = ["envelope_to_mesh", "signed_distance", "sdf_grid"]
 
 
-def envelope_to_mesh(envelope: Envelope, exterior_only: bool = True) -> trimesh.Trimesh:
-    """Triangulate an envelope's surfaces into a single mesh."""
-    surfaces = envelope.exterior_opaque_surfaces() if exterior_only else list(envelope.surfaces)
+def envelope_to_mesh(
+    envelope: Envelope, mode: str = "shell", repair: bool = True
+) -> trimesh.Trimesh:
+    """Triangulate an envelope's surfaces into a single mesh.
+
+    Args:
+        mode: which surfaces to mesh — ``"shell"`` (closed outer boundary:
+            outdoors + ground; the default, needed for a reliable SDF sign),
+            ``"exterior"`` (outdoors only), or ``"all"``.
+        repair: merge coincident vertices, fill holes, and fix winding/normals so
+            the assembled shell is as close to watertight as the source allows.
+    """
+    if mode == "shell":
+        surfaces = envelope.shell_surfaces()
+    elif mode == "exterior":
+        surfaces = envelope.exterior_opaque_surfaces()
+    elif mode == "all":
+        surfaces = list(envelope.surfaces)
+    else:
+        raise ValueError(f"mode must be shell/exterior/all, got {mode!r}")
     if not surfaces:
         raise ValueError("no surfaces to mesh")
 
@@ -44,6 +61,13 @@ def envelope_to_mesh(envelope: Envelope, exterior_only: bool = True) -> trimesh.
     mesh = trimesh.Trimesh(
         vertices=np.concatenate(verts), faces=np.concatenate(faces), process=True
     )
+    if repair:
+        # Merge coincident vertices from adjacent surfaces, then close small gaps
+        # and make winding/normals consistent — the steps that recover watertightness.
+        mesh.merge_vertices()
+        trimesh.repair.fill_holes(mesh)
+        trimesh.repair.fix_winding(mesh)
+        trimesh.repair.fix_normals(mesh)
     return mesh
 
 

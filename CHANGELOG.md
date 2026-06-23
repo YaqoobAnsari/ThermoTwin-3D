@@ -78,6 +78,14 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
   point-cloud operators (GINO/GNOT/Transolver/MeshGraphNet/DeepONet/PointNet++) are
   registered as explicit "deferred" (Block-2 competitors on irregular geometry) and
   raise loudly rather than silently. Gated by `tests/test_registry.py` (43 tests total).
+- Watertight mesh repair — `Envelope.shell_surfaces()` (outdoors + ground = the
+  closed outer boundary) + `envelope_to_mesh(mode="shell", repair=...)`. The real
+  DOE SmallOffice now meshes watertight, so the SDF inside/outside **sign is
+  reliable** (interior SDF −3 m). Gated by a new real-building integration test.
+- Block-1 benchmark harness — `scripts/benchmark.py` + `scripts/slurm/benchmark.slurm`:
+  trains every model in the roster and tabulates field relative L2, U-value error,
+  the gap to the 1-D clear-wall baseline (H1), inference speedup vs the FV solver,
+  params and train time → `results/block1_benchmark.{json,md}` leaderboard.
 - Geometry featurisation for the operator (Stage-1 input) — `geometry/pointcloud.py`
   (area-weighted surface sampling into a feature-tagged point cloud: position,
   normal, U-value, resistance, surface type) + `geometry/sdf.py` (envelope→mesh,

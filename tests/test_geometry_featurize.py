@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 import trimesh
@@ -87,7 +89,23 @@ def test_sdf_grid_spans_both_signs():
 
 
 def test_envelope_to_mesh(env):
-    mesh = envelope_to_mesh(env)
+    mesh = envelope_to_mesh(env, mode="exterior", repair=False)
     assert isinstance(mesh, trimesh.Trimesh)
     assert mesh.faces.shape[0] == 2  # one quad wall -> two triangles
     assert mesh.area == pytest.approx(30.0, rel=1e-6)  # 10 m x 3 m
+
+
+_DOE = Path(__file__).resolve().parents[1] / "data/raw/doe/idf"
+_SMALL_OFFICE = _DOE / "RefBldgSmallOfficeNew2004_Chicago.idf"
+
+
+@pytest.mark.skipif(not _SMALL_OFFICE.exists(), reason="DOE IDF not downloaded")
+def test_shell_mesh_is_watertight_and_sign_correct():
+    """The closed shell (outdoors + ground) gives a watertight mesh with a
+    reliable inside/outside SDF sign on a real building."""
+    env = Envelope.from_idf(_SMALL_OFFICE)
+    mesh = envelope_to_mesh(env, mode="shell", repair=True)
+    assert mesh.is_watertight
+    assert mesh.is_volume
+    interior = mesh.bounds.mean(axis=0)  # a point inside the building
+    assert signed_distance(mesh, interior[None])[0] < 0

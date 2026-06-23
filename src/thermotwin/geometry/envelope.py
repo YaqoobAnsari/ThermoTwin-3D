@@ -37,6 +37,8 @@ __all__ = [
 
 # Known IDF outside-boundary-condition tokens we care about.
 _EXTERIOR_BC = {"outdoors"}
+# Surfaces forming the closed outer shell: the outside world plus ground contact.
+_SHELL_BC = {"outdoors", "ground", "groundfcfactormethod", "groundslabpreprocessoraverage"}
 _KNOWN_BC = {
     "outdoors",
     "ground",
@@ -265,6 +267,22 @@ class Envelope:
             s
             for s in self.surfaces
             if s.is_exterior and _norm(s.construction_name) in self._constr_by_norm
+        ]
+
+    def shell_surfaces(self) -> list[Surface]:
+        """Surfaces forming the building's closed outer boundary.
+
+        The watertight shell is everything facing the outside world *or* the ground
+        (walls, roof, ground-contact floor) — i.e. boundary in {Outdoors, Ground} —
+        with a resolvable construction. Unlike :meth:`exterior_opaque_surfaces`
+        (Outdoors only), including ground-contact surfaces closes the bottom of the
+        volume, which the SDF needs for a reliable inside/outside sign.
+        """
+        return [
+            s
+            for s in self.surfaces
+            if s.boundary.strip().lower() in _SHELL_BC
+            and _norm(s.construction_name) in self._constr_by_norm
         ]
 
     def surface_u_value(self, surface: Surface) -> float:
