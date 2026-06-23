@@ -47,6 +47,16 @@ htmlcov/
 *.tif
 *.tiff
 
+# ---- Datasets: ignore all blobs under data/, keep only structure + provenance ----
+# (belt-and-braces with the extension list above; see docs/datasets.md)
+/data/**
+!/data/**/
+!/data/**/.gitkeep
+!/data/**/SOURCE.md
+
+# ---- Vendored third-party baseline code (fetched by scripts/fetch_baselines.sh) ----
+vendored/
+
 # ---- Experiment outputs ----
 results/*
 !results/README.md
