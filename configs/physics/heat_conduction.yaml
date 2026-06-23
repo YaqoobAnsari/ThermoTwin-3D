@@ -1,0 +1,8 @@
+name: heat_conduction      # transient Fourier conduction through the envelope
+equation: transient        # transient | steady
+pde_loss_weight: 1.0       # weight on the heat-equation residual
+bc:
+  indoor_temp_C: 20.0
+  outdoor_temp_C: 0.0
+  solar_gain: false
+  convection_coeff: { indoor: 7.7, outdoor: 25.0 }   # W/m^2K (placeholder)

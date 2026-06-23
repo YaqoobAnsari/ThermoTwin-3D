@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thermotwin-3d"
+version = "0.0.1"
+description = "A geometry-resolved, physics-informed thermal twin of building envelopes from as-built scans."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary (pre-publication; see LICENSE)" }
+authors = [{ name = "Ansari" }]
+keywords = [
+    "neural-operator", "physics-informed", "heat-transfer", "digital-twin",
+    "building-envelope", "scan-to-bim", "GINO", "thermal-bridge",
+]
+
+# Core runtime deps. Heavy / platform-sensitive packages (torch, open3d, FEM) are
+# installed via env/environment.yml or the optional extras below.
+dependencies = [
+    "numpy",
+    "scipy",
+    "einops",
+    "hydra-core",
+    "omegaconf",
+    "trimesh",
+    "meshio",
+    "h5py",
+    "tqdm",
+    "matplotlib",
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+dev = ["ruff", "mypy", "pytest", "pre-commit", "nbstripout"]
+operators = ["neuraloperator"]      # GINO / FNO reference implementation
+geo = ["pyvista", "open3d"]         # visualisation + heavier geometry IO
+track = ["wandb"]
+# fem = ["fenics-dolfinx"]          # install via conda-forge when generating GT
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "NPY"]
+ignore = ["E501"]   # line length handled by the formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["thermotwin"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+plugins = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

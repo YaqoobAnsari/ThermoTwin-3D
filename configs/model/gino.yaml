@@ -1,0 +1,8 @@
+name: gino                 # Geometry-Informed Neural Operator (primary backbone)
+in_channels: 4             # e.g. SDF + material id + BC encodings (placeholder)
+out_channels: 1            # temperature field (add heat-flux head later)
+gno_radius: 0.05
+fno_modes: [16, 16, 16]
+latent_grid: [32, 32, 32]
+hidden_channels: 64
+# TODO: finalise once src/thermotwin/models/gino.py lands.

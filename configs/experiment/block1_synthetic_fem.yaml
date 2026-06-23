@@ -1,0 +1,8 @@
+# @package _global_
+# Experiment Block 1 — controlled synthetic FEM benchmark.
+defaults:
+  - override /data: synthetic_fem
+  - override /model: gino
+  - override /physics: heat_conduction
+
+tags: [block1, synthetic, fem-benchmark]

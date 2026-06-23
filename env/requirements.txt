@@ -1,0 +1,32 @@
+# Core scientific stack
+numpy
+scipy
+einops
+
+# Neural operators / config / experiment tracking
+neuraloperator        # GINO / FNO reference implementation
+hydra-core
+omegaconf
+wandb
+tqdm
+
+# Geometry: point clouds, meshes, SDF, IO
+trimesh
+pyvista
+meshio
+open3d                # heavier; pin/replace if Spartan build is troublesome
+h5py
+
+# FEM ground truth (pick per machine)
+# fenics-dolfinx      # via conda-forge; uncomment when generating GT
+
+# Plotting / analysis
+matplotlib
+scikit-learn
+
+# Dev tooling
+pytest
+ruff
+mypy
+pre-commit
+nbstripout

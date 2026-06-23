@@ -1,0 +1,9 @@
+epochs: 200
+batch_size: 1
+lr: 1.0e-3
+weight_decay: 1.0e-5
+optimizer: adamw
+scheduler: cosine
+grad_clip: 1.0
+log_every: 50
+ckpt_every: 10

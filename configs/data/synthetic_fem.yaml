@@ -1,0 +1,4 @@
+name: synthetic_fem        # FEM heat-conduction fields generated over the geometry corpus
+root: data/processed/synthetic_fem
+split: { train: 0.8, val: 0.1, test: 0.1 }
+# TODO: point at the generated FEM GT once scripts/generate_fem_groundtruth.py is implemented.

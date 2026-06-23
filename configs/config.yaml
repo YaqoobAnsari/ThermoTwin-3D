@@ -1,0 +1,12 @@
+# Root experiment config. Compose with: python scripts/train.py experiment=block1_synthetic_fem
+defaults:
+  - data: synthetic_fem
+  - model: gino
+  - physics: heat_conduction
+  - train: default
+  - _self_
+
+project: ThermoTwin-3D
+seed: 1337
+device: cuda
+out_dir: results
