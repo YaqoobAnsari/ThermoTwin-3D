@@ -18,8 +18,8 @@ temperature   deg C       (any consistent linear scale works)
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 __all__ = [
     "Layer",
@@ -85,7 +85,7 @@ class WallResult:
         )
         rows = [
             f"  {name:<24s} {temp:8.3f} degC"
-            for name, temp in zip(self.node_names, self.node_temperatures)
+            for name, temp in zip(self.node_names, self.node_temperatures, strict=True)
         ]
         return "\n".join([head, *rows])
 
