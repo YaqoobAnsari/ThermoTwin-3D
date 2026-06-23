@@ -131,6 +131,56 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Conda env on project disk (`/data/gpfs/projects/punim2769/envs/thermotwin`):
   Python 3.10 + PyTorch 2.5.1/CUDA 12.1 + neuraloperator 2.0 + geometry/IO stack,
   via `scripts/setup_env.sh`.
+- **Block-1 model ablation — beating the data-only FNO on U-MAE.** A targeted
+  countermeasure sweep, motivated by the diagnosis that U-MAE is governed by the
+  through-wall θ-gradient at the indoor face, where the plain FNO loses twice:
+  spectral bias smears the sharp high-k bridge gradient, and the FFT's periodic
+  wraparound contaminates the non-periodic Dirichlet/film faces. New machinery:
+  - `data/dataset.py` — pluggable `feature_set`/`build_input_channels`, adding the
+    `enriched` set that carries the analytic closed-form 1-D clear-wall θ as a
+    dedicated input channel (the geometry/physics prior).
+  - `models/delta_fno.py` (`configs/model/delta_fno.yaml`) — predicts
+    `θ = θ_prior + fno(x)`, i.e. learns only the residual lateral-spreading
+    correction near bridges instead of regressing the whole sharp field; the prior
+    nails bridge-free columns by construction.
+  - `models/ufno.py` (`configs/model/ufno.yaml`) — U-FNO (Wen et al., 2022): a
+    parallel **local** Conv2d path summed with the spectral path inside every
+    block, restoring the boundary-aware high-frequency capacity the FFT lacks.
+  - `models/fno.py` — `domain_padding` exposed (`fno_padded`: pad only the
+    non-periodic through-wall axis to break the FFT wraparound at the boundary).
+  - `losses/building_loss.py` (`u_value_loss`) — a differentiable indoor-face
+    U-value loss whose gradient touches only row 0 of θ, the most targeted lever
+    for U-MAE (`fno_uloss`, `delta_fno_uloss`).
+  - `scripts/ablate.py` + `scripts/slurm/ablate.slurm` — self-contained runner
+    over the 8-variant roster × seeds `{1337, 1, 2}`, evaluated at each val
+    sample's native resolution, stratified by thermal-bridge presence, with a
+    *robust win* gate (mean U-MAE below reference by more than the pooled seed σ).
+    Writes `results/block1_ablations.{json,md}`.
+  - Gated by `tests/test_variants.py`, `tests/test_input_channels.py`,
+    `tests/test_building_loss.py`; `models/registry.py` wires the new variants.
+  - **Roster:** `fno` (reference), `fno_padded` (domain padding), `fno_enriched`
+    (prior as an input channel), `delta_fno` (prior as an additive residual),
+    `ufno` (local-conv path), `fno_uloss` (U-value loss), `delta_fno_uloss`
+    (delta head + U-value loss), `fno_physics` (PDE-residual loss, weight 0.1).
+  - **Outcome (mean ± std over 3 seeds, 300 epochs · A100, native-resolution eval
+    on 64 val samples = 15 clear / 49 bridged; reference `fno` U-MAE
+    0.0242 ± 0.0034, field rel-L2 0.0147):** five of eight variants robustly beat
+    the reference. **Winner `delta_fno`: U-MAE 0.0105 ± 0.0009 W/m²K** (−56% vs
+    reference, 3.9× pooled σ) at the **best field rel-L2 in the sweep, 0.0131**
+    — it improves the primary metric without trading off the secondary.
+    `delta_fno_uloss` is statistically indistinguishable (0.0111 ± 0.0005); once
+    the prior pins the boundary flux the U-loss has nothing left to correct, so the
+    simpler `delta_fno` is the pick. `fno_enriched` 0.0162 ± 0.0017 (prior as a mere
+    input channel gets ~half the gain), `ufno` 0.0196 ± 0.0010, `fno_uloss`
+    0.0200 ± 0.0009. **The two pure boundary-treatment levers lose:** `fno_physics`
+    0.0248 ± 0.0035 and `fno_padded` 0.0256 ± 0.0064 (also worst rel-L2, highest
+    seed variance) sit within noise of the reference. The win is **stratified**:
+    `delta_fno` collapses clear U-MAE 0.0076 → 0.0017 (−78%) and bridge
+    0.0293 → 0.0133 (−55%), so the largest absolute gain lands on the hard bridged
+    cases. **Decision: adopt `delta_fno` as the Block-1 backbone**; the geometry/
+    physics prior that hands the operator the boundary structure wins, while
+    loss-only and architecture-only boundary tweaks without that prior do not.
+    See ADR `0004`; leaderboard in `results/block1_ablations.md`.
 
 ### Changed
 - **Renamed the project `BuildTrust-3D` → `ThermoTwin-3D`** to match the thermal-twin thesis

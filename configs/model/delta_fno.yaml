@@ -1,0 +1,8 @@
+name: delta_fno           # FNO that predicts a correction on the analytic 1-D theta prior
+in_channels: 6            # enriched feature_set [log10(k), r_si, r_se, clearwall_theta, ...]
+out_channels: 1           # dimensionless temperature field theta
+n_modes: [8, 16]          # retained Fourier modes: (through-wall, along-wall)
+hidden_channels: 32
+n_layers: 4
+clearwall_index: 3        # input channel holding the analytic clear-wall theta prior
+domain_padding: [0.25, 0.0]   # pad only the non-periodic through-wall axis

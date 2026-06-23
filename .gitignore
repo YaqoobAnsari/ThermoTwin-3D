@@ -74,3 +74,5 @@ wandb/
 *.swp
 !results/block1_benchmark.json
 !results/block1_benchmark.md
+!results/block1_ablations.json
+!results/block1_ablations.md

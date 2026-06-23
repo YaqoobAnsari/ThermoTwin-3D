@@ -41,7 +41,10 @@ living document; update it (and add an ADR under `decisions/`) when a significan
   FEM/EnergyPlus ground-truth generators.
 - **`models/`** — the **GINO** backbone (graph-neural-operator encode → latent regular grid →
   spectral/Fourier layers → decode to arbitrary query points) and the baseline operators
-  (FNO, DeepONet, GNOT, Transolver, MeshGraphNet) + data-driven controls.
+  (FNO, DeepONet, GNOT, Transolver, MeshGraphNet) + data-driven controls. The Block-1
+  ablation winner `models/delta_fno.py` (FNO predicting a correction on the analytic
+  1-D clear-wall θ prior) and `models/ufno.py` (U-FNO local-conv path) are wired
+  through the same `(B,C,H,W)→(B,1,H,W)` registry contract. See ADR `0004`.
 - **`losses/`** — supervised field loss + the **PDE residual** (heat equation) and BC penalties
   that make the prediction physics-consistent. ✅ `losses/heat_residual.py` — the
   autograd twin of `physics/steady_fv`, evaluating the discrete FV steady operator
@@ -99,6 +102,22 @@ living document; update it (and add an ADR under `decisions/`) when a significan
    (0.0143) but not U-MAE; UNet/CNN trail. Every geometry-aware model beats the
    geometry-blind 1-D clear-wall baseline (U-MAE 0.1168) by 3.4–5.7× (H1).
    Leaderboard in `results/block1_benchmark.md`. See ADR `0003`.
+
+   **Model ablation — beat the data-only FNO on U-MAE** ✅ U-MAE is set by the
+   through-wall θ-gradient at the indoor face, where the plain FNO loses twice
+   (spectral bias smears the sharp bridge gradient; the periodic FFT contaminates
+   the non-periodic Dirichlet/film faces). `scripts/ablate.py` swept eight targeted
+   countermeasures × seeds `{1337,1,2}` (delta-learning on the analytic clear-wall
+   prior, enriched inputs, U-FNO local path, through-wall domain padding,
+   indoor-face U-value loss, PDE residual), native-resolution eval, *robust win* =
+   mean U-MAE below the reference by more than the pooled seed σ. **Winner
+   `delta_fno`** (`θ = θ_prior + fno(x)`): **U-MAE 0.0105 ± 0.0009 W/m²K (−56% vs
+   the 3-seed FNO reference 0.0242), best field rel-L2 0.0131** — improves the
+   primary metric without trading off the secondary. The geometry/physics prior
+   that hands the operator the boundary structure wins; loss-only and
+   architecture-only boundary tweaks (`fno_padded`, `fno_physics`) sit within noise.
+   **Adopted as the Block-1 backbone.** Leaderboard in
+   `results/block1_ablations.md`. See ADR `0004`.
 7. ~~`geometry/` SDF / point-cloud featurisation~~ ✅ (partial)
    `geometry/pointcloud.py` (area-weighted surface sampling → feature-tagged point
    cloud: position, normal, U-value, resistance, surface type) + `geometry/sdf.py`

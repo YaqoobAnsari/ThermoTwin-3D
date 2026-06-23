@@ -15,12 +15,14 @@ from collections.abc import Mapping
 from torch import nn
 
 from .cnn import build_cnn
+from .delta_fno import build_delta_fno
 from .fno import build_fno
+from .ufno import build_ufno
 from .unet import build_unet
 
 __all__ = ["build_model", "WIRED_MODELS", "DEFERRED_MODELS"]
 
-WIRED_MODELS = ("fno", "cnn", "unet")
+WIRED_MODELS = ("fno", "cnn", "unet", "delta_fno", "ufno")
 # Vendored under vendored/; wire when point-cloud featurisation exists (Block 2).
 DEFERRED_MODELS = ("gino", "gnot", "transolver", "meshgraphnet", "deeponet", "pointnet2")
 
@@ -34,12 +36,40 @@ def build_model(model_cfg: Mapping) -> nn.Module:
     n_layers = int(model_cfg.get("n_layers", 4))
 
     if name == "fno":
+        domain_padding = model_cfg.get("domain_padding", None)
+        if domain_padding is not None and not isinstance(domain_padding, (int, float)):
+            domain_padding = list(domain_padding)
         return build_fno(
             in_channels=in_ch,
             out_channels=out_ch,
             n_modes=tuple(model_cfg.get("n_modes", (8, 16))),
             hidden_channels=hidden,
             n_layers=n_layers,
+            domain_padding=domain_padding,
+            positional_embedding=model_cfg.get("positional_embedding", "grid"),
+        )
+    if name == "delta_fno":
+        domain_padding = model_cfg.get("domain_padding", None)
+        if domain_padding is not None and not isinstance(domain_padding, (int, float)):
+            domain_padding = list(domain_padding)
+        return build_delta_fno(
+            in_channels=in_ch,
+            out_channels=out_ch,
+            n_modes=tuple(model_cfg.get("n_modes", (8, 16))),
+            hidden_channels=hidden,
+            n_layers=n_layers,
+            clearwall_index=int(model_cfg.get("clearwall_index", 3)),
+            domain_padding=domain_padding,
+            positional_embedding=model_cfg.get("positional_embedding", "grid"),
+        )
+    if name == "ufno":
+        return build_ufno(
+            in_channels=in_ch,
+            out_channels=out_ch,
+            n_modes=tuple(model_cfg.get("n_modes", (8, 16))),
+            hidden_channels=hidden,
+            n_layers=n_layers,
+            local_kernel=int(model_cfg.get("local_kernel", 3)),
         )
     if name == "cnn":
         return build_cnn(

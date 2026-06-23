@@ -1,0 +1,7 @@
+name: ufno                # FNO with a parallel local-conv path per block (U-FNO)
+in_channels: 3            # [log10(k), r_si, r_se]
+out_channels: 1           # dimensionless temperature field theta
+n_modes: [8, 16]          # retained Fourier modes: (through-wall, along-wall)
+hidden_channels: 32
+n_layers: 4
+local_kernel: 3           # spatial kernel of the local conv path (odd; size-preserving)
