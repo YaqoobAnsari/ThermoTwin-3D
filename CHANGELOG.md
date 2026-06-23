@@ -192,6 +192,36 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
     physics prior that hands the operator the boundary structure wins, while
     loss-only and architecture-only boundary tweaks without that prior do not.
     See ADR `0004`; leaderboard in `results/block1_ablations.md`.
+- **Block-1 out-of-distribution generalization study — the in-distribution winner
+  travels.** ADR [`0005`](docs/decisions/0005-ood-generalization.md); Exp 1.4 in
+  `docs/experiments.md`; artefacts `results/block1_ood.{json,md}` (git-tracked). Five
+  variants (`delta_fno`, `fno`, `fno_uloss`, `ufno`, `fno_physics`) × 3 seeds ×
+  2 data regimes (full 256 / lowdata 64) × 5 native-resolution test sets (30 training
+  runs, A100, 300 ep). Four OOD axes each move **one** physically meaningful covariate
+  — unseen wall assemblies, surface films outside the training band, a denser/wider
+  bridge regime, finer discretisation — while **holding boundary temperatures fixed**,
+  because θ=(T−T_out)/(T_in−T_out) is invariant to them under linear steady conduction
+  (shifting temperatures is a no-op OOD test).
+  - **`delta_fno` does not lose anywhere:** lowest U-MAE *and* smallest generalization
+    gap on **all 8 OOD cells** (4 axes × 2 regimes). Full-regime U-MAE — `ood_walls`
+    **0.0680±0.0089** (next ufno 0.3026, **4.4×** lead), `ood_bridges`
+    **0.0491±0.0081** (next 0.1669, **3.4×**), `ood_films` **0.0617±0.0054**,
+    `ood_res` **0.0143±0.0008** (next 0.0713, **5.0×**) — with near-flat gaps
+    (`ood_res` +0.0037 vs ufno +0.0517). The hard analytic 1-D θ prior is a property
+    of the physics, not the training distribution, so it carries across shift.
+  - **Unseen wall assemblies are the binding risk** (hardest axis for everyone, mean
+    gap +0.2419 full): walls ≫ bridges > films ≫ res. The in-distribution auxiliary
+    winners overfit — `ufno` posts the largest gap in the study (lowdata `ood_walls`
+    **+0.3791**), `fno_uloss` +0.2852 on walls.
+  - **Soft PDE-residual loss earns a marginal low-data keep only:** a wash in full
+    data, a consistent (but within-σ, directional) win on all 5 cells in lowdata,
+    dominated ~8× by the hard prior. Prior strength: hard θ-channel ≫ U-supervision >
+    soft residual.
+  - **Decision:** `delta_fno` confirmed as the Block-1 default and the paper's lead
+    contribution (report per-axis OOD U-MAE with assemblies as the headline stressor);
+    the PDE-residual loss stays a low-data consistency rail, **not** re-enabled by
+    default. Mandate for Block-2 GINO: make the **assembly/material-layer encoding**
+    the design and OOD-evaluation focus.
 
 ### Changed
 - **Renamed the project `BuildTrust-3D` → `ThermoTwin-3D`** to match the thermal-twin thesis
