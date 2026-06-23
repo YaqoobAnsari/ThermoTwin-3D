@@ -2,7 +2,7 @@
 # Experiment Block 1 — controlled synthetic FEM benchmark.
 defaults:
   - override /data: synthetic_fem
-  - override /model: gino
+  - override /model: fno          # FNO on the regular synthetic grid; GINO arrives with point clouds (Block 2)
   - override /physics: heat_conduction
 
 tags: [block1, synthetic, fem-benchmark]

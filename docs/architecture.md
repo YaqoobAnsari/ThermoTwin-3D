@@ -60,7 +60,35 @@ living document; update it (and add an ADR under `decisions/`) when a significan
 
 ## Next implementation steps
 
-1. `physics/` steady-state conduction operator + a tiny analytic test case (1D slab → known U-value).
-2. `geometry/` SDF + material-layer featuriser on a single DOE Reference Building.
-3. `scripts/generate_fem_groundtruth.py` → first FEM fields into `data/processed/`.
-4. `models/gino.py` minimal forward; overfit one sample; then the Block-1 sweep.
+1. ~~`physics/` steady-state conduction operator + a tiny analytic test case~~ ✅
+   `physics/conduction.py` (1-D oracle) + `physics/steady_fv.py` (geometry-resolved
+   FV solver, machine-precision match to the oracle). See ADR `0002`.
+2. ~~`geometry/` material-layer featuriser on a DOE Reference Building~~ ✅
+   `geometry/idf.py` (dependency-free IDF reader) + `geometry/envelope.py`
+   (Material/Construction/Surface → per-surface U-values, case-insensitive name
+   resolution, polygon area/normal). Bridges to `steady_fv` and is gated by
+   `tests/test_envelope.py` (incl. a real-DOE integration test). *SDF / point-cloud
+   featurisation still to come — needed for the operator input on curved geometry.*
+3. ~~`scripts/generate_fem_groundtruth.py` → first fields into `data/processed/`~~ ✅
+   `data/synthetic_fem.py` generates layered walls + thermal bridges, solved by
+   `steady_fv`; the script writes a seeded corpus (`block1_train`/`block1_val`) with
+   a manifest. Bridges shift effective U 40–50% (max 4×) from the 1-D clear-wall
+   value — the geometry signal that motivates the operator (H1).
+4. ~~Minimal operator forward; overfit one sample; Block-1 training~~ ✅ (FNO first)
+   `models/fno.py` (neuraloperator FNO; GINO follows on Block-2 point clouds),
+   `data/dataset.py` (predicts dimensionless θ), `eval/metrics.py` (relative L2),
+   and a Hydra `scripts/train.py`. Smoke run: **val relative L2 0.65 → 0.033 in 15
+   CPU epochs.** Gated by `tests/test_models.py`.
+
+### Now next
+5. ~~Building-metric eval (recover U from θ, pair with relative L2)~~ ✅
+   `eval/building.py` + `scripts/evaluate.py` — paired metrics at native resolution,
+   operator vs 1-D clear-wall baseline (H1). `scripts/slurm/train.slurm` ready.
+   **← run the GPU Block-1 sweep on Slurm (full epochs/batched) to sharpen the numbers.**
+   NB: the login node kills sustained CPU training — Slurm only.
+6. ~~Baseline comparison wiring — registry + no-operator CNN control~~ ✅
+   `models/registry.py` + `models/cnn.py`; `model=fno`/`model=cnn` config-selectable.
+   Point-cloud operators registered as deferred (Block 2). **← run the FNO-vs-CNN
+   comparison on Slurm to populate the table.**
+7. `geometry/` SDF / point-cloud featurisation, then `models/gino.py` — the bridge to
+   real scans (Block 2); wire the deferred operators there.

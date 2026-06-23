@@ -4,9 +4,17 @@ defaults:
   - model: gino
   - physics: heat_conduction
   - train: default
+  - experiment: null        # enables `experiment=block1_synthetic_fem` (no leading +)
   - _self_
 
 project: ThermoTwin-3D
 seed: 1337
 device: cuda
 out_dir: results
+ckpt: null                  # path to a checkpoint, for scripts/evaluate.py
+
+# Isolate each run's outputs (checkpoints, metrics.json) in its own job dir
+# instead of the repo root; outputs/ is git-ignored.
+hydra:
+  job:
+    chdir: true

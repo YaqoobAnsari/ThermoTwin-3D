@@ -1,0 +1,6 @@
+name: fno                  # Fourier Neural Operator — Block-1 regular-grid backbone
+in_channels: 3             # [log10(k), r_si, r_se]
+out_channels: 1            # dimensionless temperature field theta
+n_modes: [8, 16]           # retained Fourier modes: (through-wall, along-wall)
+hidden_channels: 32
+n_layers: 4

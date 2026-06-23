@@ -1,0 +1,5 @@
+name: cnn                  # convolutional baseline (no spectral/operator machinery)
+in_channels: 3             # [log10(k), r_si, r_se]
+out_channels: 1            # dimensionless temperature field theta
+hidden_channels: 32
+n_layers: 4                # residual blocks; dilation grows 1,2,4,8 for receptive field

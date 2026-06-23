@@ -4,7 +4,7 @@
 
 **A geometry-resolved, physics-informed thermal twin of building envelopes — learned from as-built scans.**
 
-*Status: 🚧 early research scaffold · Target venue: Automation in Construction (Q1)*
+*Status: 🔬 active research · Block-1 pipeline implemented & tested · Target venue: Automation in Construction (Q1)*
 
 </div>
 
@@ -19,6 +19,28 @@ The headline contribution: **the first geometry-resolved, physics-informed therm
 - **building-thermal ML**, which uses lumped / zone geometry;
 - **SciML operator learning**, which never touches buildings; and
 - **thermal point clouds**, which only *visualise* heat, never *predict* it.
+
+## Status & first result
+
+The **Block-1 synthetic benchmark is implemented end-to-end and tested** (43 unit tests):
+
+- **Physics** — a closed-form 1-D multilayer conduction oracle (EN ISO 6946) and a
+  geometry-resolved finite-volume conduction solver that reproduces the oracle to
+  machine precision (`physics/`, [ADR 0002](docs/decisions/0002-steady-fv-default-gt-engine.md)).
+- **Geometry** — a dependency-free EnergyPlus IDF reader + envelope featuriser that
+  lifts material-tagged surfaces and per-surface U-values from real DOE buildings (`geometry/`).
+- **Ground truth** — a seeded generator of layered walls punctured by **thermal
+  bridges**; the bridges shift effective U **40–50 % (up to 4×)** off the 1-D
+  clear-wall value — the geometry signal a lumped model cannot see (`data/synthetic_fem.py`).
+- **Learner** — a Fourier Neural Operator predicting the dimensionless temperature
+  field, with a no-spectral CNN control, behind one pluggable interface (`models/`).
+- **Evaluation** — paired metrics (relative L2 **and** U-value error) at native
+  resolution. On a first run the operator **cuts U-value error ~1.6× vs ignoring
+  thermal bridges**, validating the geometry-resolution hypothesis (H1).
+
+See [`CHANGELOG.md`](CHANGELOG.md) for the full progress log and
+[`docs/architecture.md`](docs/architecture.md) for what's next (GPU sweep, then
+point-cloud featurisation → GINO for real scans in Block 2).
 
 ## The pipeline
 
@@ -64,19 +86,31 @@ Numerical (FEM/CFD, EnergyPlus/RC, 1D U-value) · building-domain ML (Di Natale,
 ## Quickstart
 
 ```bash
-# 1. Environment (conda)
-make setup                      # creates the `thermotwin` env, installs the package + hooks
-#   or: conda env create -f env/environment.yml && pip install -e .
+# 1. Environment (conda) — Python 3.10 + PyTorch/CUDA + neuraloperator + geometry stack
+bash scripts/setup_env.sh          # builds the env on project disk (Spartan-friendly)
+#   or, generically: conda env create -f env/environment.yml && pip install -e .
 
 # 2. Sanity
-make test                       # smoke tests
-make lint                       # ruff
+make test                          # 43 unit tests (physics / geometry / data / models / eval)
+make lint                          # ruff
 
-# 3. Train / evaluate (stubs today — see docs/architecture.md)
-python scripts/train.py experiment=block1_synthetic_fem
-python scripts/evaluate.py
-#   on Spartan: sbatch scripts/slurm/train.slurm experiment=block1_synthetic_fem
+# 3. Data: open critical-path corpora (gated sets are stubbed with registration links)
+python scripts/download_data.py --list
+python scripts/download_data.py doe            # 16 DOE reference buildings (EnergyPlus IDFs)
+
+# 4. Block-1: generate ground truth → train → evaluate
+python scripts/generate_fem_groundtruth.py --name block1_train --n 256
+python scripts/generate_fem_groundtruth.py --name block1_val   --n 64 --seed 99
+python scripts/train.py    experiment=block1_synthetic_fem model=fno   # or model=cnn (baseline)
+python scripts/evaluate.py experiment=block1_synthetic_fem ckpt=<run_dir>/best.pt
+
+# On Spartan (GPU via Slurm):
+sbatch scripts/slurm/train.slurm experiment=block1_synthetic_fem model=fno train.epochs=300
 ```
+
+> **Note (HPC):** the Spartan login node kills sustained CPU compute — run training
+> through Slurm. Vendored baseline code (`vendored/`) is fetched separately via
+> `scripts/fetch_baselines.sh` and is git-ignored.
 
 ## Experiment blocks
 
@@ -92,7 +126,7 @@ Detail + metrics: [`docs/experiment-plan.md`](docs/experiment-plan.md).
 ```bibtex
 @misc{thermotwin3d,
   title  = {ThermoTwin-3D: A Geometry-Resolved, Physics-Informed Thermal Twin of Building Envelopes from As-Built Scans},
-  author = {Ansari and collaborators},
+  author = {Ansari, Mohammed Yaqoob and collaborators},
   year   = {2026},
   note   = {In preparation, Automation in Construction}
 }
