@@ -1,0 +1,43 @@
+{
+  "config": {
+    "models": [
+      "fno",
+      "cnn"
+    ],
+    "epochs": 300,
+    "batch_size": 64,
+    "lr": 0.001,
+    "seed": 1337,
+    "device": "cuda",
+    "train_root": "data/processed/block1_train",
+    "val_root": "data/processed/block1_val",
+    "target_width": 48,
+    "fv_solver_ms_per_sample": 2.5602385285310447
+  },
+  "results": [
+    {
+      "field_rel_l2": 0.01441085342594306,
+      "u_mae": 0.020488393532439364,
+      "u_mape": 4.854862173351417,
+      "u_mae_clear_baseline": 0.11678154254332185,
+      "u_improvement_x": 5.699887712446616,
+      "infer_ms_per_sample": 6.5538911512703635,
+      "speedup_vs_fv": 0.3906440417514082,
+      "model": "fno",
+      "params": 308193,
+      "train_time_s": 73.6
+    },
+    {
+      "field_rel_l2": 0.01695843894412974,
+      "u_mae": 0.02541758722098223,
+      "u_mape": 5.514331569283583,
+      "u_mae_clear_baseline": 0.11678154254332185,
+      "u_improvement_x": 4.594517234386379,
+      "infer_ms_per_sample": 0.925782835111022,
+      "speedup_vs_fv": 2.7654849835534216,
+      "model": "cnn",
+      "params": 74145,
+      "train_time_s": 68.0
+    }
+  ]
+}

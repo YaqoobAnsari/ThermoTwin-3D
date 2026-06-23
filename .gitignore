@@ -72,3 +72,5 @@ wandb/
 .DS_Store
 .idea/
 *.swp
+!results/block1_benchmark.json
+!results/block1_benchmark.md
