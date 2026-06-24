@@ -12,11 +12,19 @@ Each ``.npz`` stores a GINO sample: ``points`` (N,3) in [0,1]^3, ``feats`` (N,F)
 ``[logk_std, r_si, r_se, theta1d]``, the target ``theta`` (N,), the per-point 1-D
 ``prior`` (N,), the latent-grid ``sdf`` (G,G,G), plus ``u_value`` and metadata.
 
+With ``--irregular`` the corpus is generated on **rotated, off-lattice** geometry
+(see :mod:`thermotwin.data.synthetic_3d_irreg`) — the variant where a regular voxel
+grid is a poor fit, so GINO can justify itself over the voxel-FNO baseline. The stored
+per-sample fields are identical (the irregular records also carry a ``rotation``
+matrix), so the existing dataset loader / benchmark consume them unchanged.
+
 Examples
 --------
     python scripts/generate_3d_gt.py --n 96 --seed 1337 --name block2_train
     python scripts/generate_3d_gt.py --n 32 --seed 99 --name block2_val
     python scripts/generate_3d_gt.py --n 8 --grid 12 --npts 1024 --name smoke
+    python scripts/generate_3d_gt.py --irregular --n 96 --seed 1337 --name block2_irreg_train
+    python scripts/generate_3d_gt.py --irregular --n 32 --seed 99 --name block2_irreg_val
 """
 
 from __future__ import annotations
@@ -33,6 +41,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from thermotwin.data.synthetic_3d import (  # noqa: E402
     FEATURE_LAYOUT,
     generate_corpus_3d,
+)
+from thermotwin.data.synthetic_3d_irreg import (  # noqa: E402
+    generate_corpus_irregular,
 )
 
 PROCESSED = Path(__file__).resolve().parents[1] / "data" / "processed"
@@ -55,21 +66,30 @@ def main() -> None:
     p.add_argument(
         "--cells-per-layer", type=int, default=3, help="through-wall cells per material layer"
     )
+    p.add_argument(
+        "--irregular",
+        action="store_true",
+        help="generate rotated, off-lattice geometry (the voxel-grid-is-a-poor-fit variant)",
+    )
     a = p.parse_args()
 
     out = PROCESSED / a.name
     out.mkdir(parents=True, exist_ok=True)
-    print(f"generating {a.n} 3-D blocks (seed {a.seed}, grid {a.grid}, npts {a.npts}) -> {out}")
-
-    records = generate_corpus_3d(
-        a.n, seed=a.seed, grid=a.grid, n_points=a.npts, cells_per_layer=a.cells_per_layer
+    kind = "irregular (rotated, off-grid)" if a.irregular else "axis-aligned box"
+    print(
+        f"generating {a.n} {kind} 3-D blocks (seed {a.seed}, grid {a.grid}, npts {a.npts}) -> {out}"
     )
+
+    gen = generate_corpus_irregular if a.irregular else generate_corpus_3d
+    records = gen(a.n, seed=a.seed, grid=a.grid, n_points=a.npts, cells_per_layer=a.cells_per_layer)
+    # The irregular corpus also persists the per-sample rotation matrix.
+    arrays = (*_ARRAYS, "rotation") if a.irregular else _ARRAYS
     manifest_rows = []
     for r in records:
         fname = f"sample_{r['id']:05d}.npz"
         np.savez_compressed(
             out / fname,
-            **{k: r[k] for k in _ARRAYS},
+            **{k: r[k] for k in arrays},
             **{s: r[s] for s in _SCALARS},
         )
         manifest_rows.append(
@@ -85,7 +105,12 @@ def main() -> None:
 
     penalties = [row["u_value"] / row["u_clear"] - 1.0 for row in manifest_rows]
     manifest = {
-        "generator": "thermotwin.data.synthetic_3d.generate_corpus_3d",
+        "generator": (
+            "thermotwin.data.synthetic_3d_irreg.generate_corpus_irregular"
+            if a.irregular
+            else "thermotwin.data.synthetic_3d.generate_corpus_3d"
+        ),
+        "irregular": bool(a.irregular),
         "seed": a.seed,
         "n_samples": a.n,
         "grid": a.grid,

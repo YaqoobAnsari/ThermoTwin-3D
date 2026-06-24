@@ -10,8 +10,14 @@ torch.manual_seed(0)
 from thermotwin.eval.metrics import relative_l2  # noqa: E402
 from thermotwin.models.registry import DEFERRED_MODELS, build_model  # noqa: E402
 
-FNO_CFG = {"name": "fno", "in_channels": 3, "out_channels": 1, "n_modes": [8, 16],
-           "hidden_channels": 16, "n_layers": 2}
+FNO_CFG = {
+    "name": "fno",
+    "in_channels": 3,
+    "out_channels": 1,
+    "n_modes": [8, 16],
+    "hidden_channels": 16,
+    "n_layers": 2,
+}
 CNN_CFG = {"name": "cnn", "in_channels": 3, "out_channels": 1, "hidden_channels": 16, "n_layers": 4}
 
 

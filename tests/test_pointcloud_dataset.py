@@ -91,6 +91,22 @@ def test_collate_distinct_geometry_rejects_stacking():
         collate_pointcloud([ds[0], ds[1]])
 
 
+def test_cache_in_memory_returns_identical_items_without_reload():
+    """The RAM cache serves the same tensors and pays np.load exactly once per sample."""
+    ds = PointCloudDataset(_TRAIN, latent_grid=G, cache_in_memory=True)
+    first = ds[0]
+    second = ds[0]
+    # Same object on the second access -> no second np.load.
+    assert first is second
+    assert torch.equal(first["theta"], second["theta"])
+    assert torch.equal(first["input_geom"], second["input_geom"])
+    # Cached and lazy paths agree element-for-element.
+    lazy = PointCloudDataset(_TRAIN, latent_grid=G, cache_in_memory=False)[0]
+    assert torch.equal(first["feats"], lazy["feats"])
+    assert torch.equal(first["sdf"], lazy["sdf"])
+    assert torch.equal(first["prior"], lazy["prior"])
+
+
 def test_voxelise_fills_full_grid():
     ds = PointCloudDataset(_TRAIN, latent_grid=G, voxelise=True, voxel_grid=G)
     item = ds[0]

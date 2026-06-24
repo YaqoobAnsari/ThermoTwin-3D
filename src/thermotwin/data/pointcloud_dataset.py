@@ -111,6 +111,8 @@ class PointCloudDataset(Dataset):
 
     Each item is a dict of tensors:
 
+    * ``sample_index`` scalar — the sample's stable dataset index (keys the GINO
+      neighbour-graph cache, whose geometry is fixed per sample across epochs);
     * ``input_geom`` ``(n, 3)`` — input-point coordinates in ``[0, 1]^3``;
     * ``feats`` ``(n, F)`` — per-point features ``[logk_std, r_si, r_se, theta1d]``;
     * ``gino_feats`` ``(n, F-1)`` — ``feats`` with the prior channel dropped (the
@@ -138,6 +140,12 @@ class PointCloudDataset(Dataset):
         voxelise: build the dense voxel field/features (slower load; only the grid
             baseline needs it).
         voxel_grid: fixed resolution for the voxel reconstruction.
+        cache_in_memory: decode every ``.npz`` once and hold the assembled item dicts in
+            RAM. The Block-2 corpus is a few MB, so this lifts the per-sample
+            ``np.load`` (the profile's third-largest bucket, ~1.8 ms/step) off the
+            training hot path with negligible memory cost. Items are returned by
+            reference; consumers must not mutate them in place (the runners only read /
+            ``.to(device)``-copy, which is safe). Default off to preserve the lazy path.
     """
 
     def __init__(
@@ -146,6 +154,7 @@ class PointCloudDataset(Dataset):
         latent_grid: int | None = None,
         voxelise: bool = False,
         voxel_grid: int = 16,
+        cache_in_memory: bool = False,
     ) -> None:
         self.root = Path(root)
         manifest = json.loads((self.root / "manifest.json").read_text())
@@ -153,7 +162,9 @@ class PointCloudDataset(Dataset):
         self.latent_grid = latent_grid
         self.voxelise = bool(voxelise)
         self.voxel_grid = int(voxel_grid)
+        self.cache_in_memory = bool(cache_in_memory)
         self._latent_cache: dict[int, torch.Tensor] = {}
+        self._item_cache: dict[int, dict[str, torch.Tensor]] = {}
 
     def __len__(self) -> int:
         return len(self.files)
@@ -164,6 +175,16 @@ class PointCloudDataset(Dataset):
         return self._latent_cache[grid]
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+        if self.cache_in_memory:
+            cached = self._item_cache.get(idx)
+            if cached is not None:
+                return cached
+        item = self._load_item(idx)
+        if self.cache_in_memory:
+            self._item_cache[idx] = item
+        return item
+
+    def _load_item(self, idx: int) -> dict[str, torch.Tensor]:
         d = np.load(self.files[idx], allow_pickle=True)
         points = d["points"].astype(np.float32)
         feats = d["feats"].astype(np.float32)
@@ -174,6 +195,9 @@ class PointCloudDataset(Dataset):
 
         gino_feats = np.delete(feats, PRIOR_CHANNEL, axis=1)
         item: dict[str, torch.Tensor] = {
+            # Stable per-sample id, used to key the GINO neighbour-graph cache (the
+            # geometry is fixed per sample across epochs, so the CRS graph is too).
+            "sample_index": torch.tensor(int(idx), dtype=torch.int64),
             "input_geom": torch.from_numpy(points),
             "feats": torch.from_numpy(feats),
             "gino_feats": torch.from_numpy(np.ascontiguousarray(gino_feats)),
@@ -215,6 +239,7 @@ def collate_pointcloud(batch: list[dict]) -> dict:
     if len(batch) == 1:
         b = batch[0]
         return {
+            "sample_index": b["sample_index"].reshape(1),  # (1,) stable cache key
             "input_geom": b["input_geom"].unsqueeze(0),  # (1, n, 3)
             "feats": b["feats"].unsqueeze(0),  # (1, n, F)
             "gino_feats": b["gino_feats"].unsqueeze(0),  # (1, n, F-1)
@@ -251,6 +276,7 @@ def collate_pointcloud(batch: list[dict]) -> dict:
             "or pre-group equal-geometry samples."
         )
     return {
+        "sample_index": torch.stack([b["sample_index"] for b in batch]),
         "input_geom": geom.unsqueeze(0),
         "feats": torch.stack([b["feats"] for b in batch], dim=0),
         "gino_feats": torch.stack([b["gino_feats"] for b in batch], dim=0),

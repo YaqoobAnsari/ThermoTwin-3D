@@ -32,8 +32,13 @@ fit the ``(B, C, H, W)`` grid contract, so the Block-2 runner calls
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Iterator
+
 from neuralop.models import GINO
 from torch import Tensor, nn
+
+from .gino_accel import NeighbourCache, patch_gno_neighbour_search, torch_cluster_available
 
 __all__ = ["GinoOperator", "DeltaGino", "build_gino", "build_delta_gino"]
 
@@ -108,12 +113,32 @@ class GinoOperator(nn.Module):
         in_gno_transform_type: str = "nonlinear",
         out_gno_transform_type: str = "linear",
         gno_use_open3d: bool = False,
+        cache_neighbours: bool = False,
+        neighbour_search_backend: str = "auto",
+        compile_fno: bool = False,
     ) -> None:
         super().__init__()
         fno_n_modes = tuple(int(m) for m in fno_n_modes)
         _validate_modes(fno_n_modes, int(latent_grid), int(gno_coord_dim))
         self.gno_coord_dim = int(gno_coord_dim)
         self.latent_grid = int(latent_grid)
+        # --- GPU-throughput accelerators (opt-in; default off = exact legacy path) ---
+        # The per-sample geometry (input_geom, latent_queries, output_queries) is fixed
+        # across epochs, so the two GNO neighbour searches recompute the *same* CRS graph
+        # every forward. With cache_neighbours the graph is computed once per sample and
+        # reused; with backend 'torch_cluster' the search runs on-GPU instead of via the
+        # native dense torch.cdist fallback. Both are correctness-preserving (the cached
+        # / torch_cluster CRS is set-identical to the native one).
+        self.cache_neighbours = bool(cache_neighbours)
+        if neighbour_search_backend not in ("auto", "native", "torch_cluster"):
+            raise ValueError(
+                "neighbour_search_backend must be one of {'auto', 'native', "
+                f"'torch_cluster'}}, got {neighbour_search_backend!r}."
+            )
+        if neighbour_search_backend == "auto":
+            neighbour_search_backend = "torch_cluster" if torch_cluster_available() else "native"
+        self.neighbour_search_backend = neighbour_search_backend
+        self._neighbour_cache = NeighbourCache() if self.cache_neighbours else None
         self.gino = GINO(
             in_channels=int(in_channels),
             out_channels=int(out_channels),
@@ -130,6 +155,55 @@ class GinoOperator(nn.Module):
             gno_use_open3d=bool(gno_use_open3d),
             gno_use_torch_scatter=True,
         )
+        # The latent FNO is the profile's single dominant cost (dense spectral-conv
+        # GEMMs on a fixed G^3 grid) and is the safest torch.compile target: its shapes
+        # are static per sample, unlike the GNO neighbour indexing whose edge count is
+        # data-dependent. Compiling only the FNO blocks fuses the gelu/copy elementwise
+        # ops around those GEMMs without risking graph breaks on the dynamic GNO path.
+        self.compile_fno = bool(compile_fno)
+        if self.compile_fno:
+            import torch
+
+            self.gino.fno_blocks = torch.compile(self.gino.fno_blocks)
+
+    @property
+    def neighbour_cache(self) -> NeighbourCache | None:
+        """The per-sample neighbour-graph cache, or ``None`` if caching is disabled."""
+        return self._neighbour_cache
+
+    def set_sample_key(self, key: object | None) -> None:
+        """Tell the neighbour cache which sample the next forward is for.
+
+        ``key`` must be stable for a given sample across epochs (e.g. its dataset
+        index). Passing ``None`` bypasses the cache for the next forward (always
+        recomputes) — used to compare a cached and an un-cached forward in tests. No-op
+        when caching is disabled.
+        """
+        if self._neighbour_cache is not None:
+            self._neighbour_cache.active_key = key
+
+    def clear_neighbour_cache(self) -> None:
+        """Drop all cached neighbour graphs (e.g. when the corpus changes)."""
+        if self._neighbour_cache is not None:
+            self._neighbour_cache.clear()
+
+    @contextlib.contextmanager
+    def accelerate(self) -> Iterator[GinoOperator]:
+        """Context that activates the neighbour cache + chosen search backend.
+
+        Wrap the train/eval loop in this; inside it, call :meth:`set_sample_key` before
+        each forward so the per-sample neighbour graph is reused. Outside the context
+        (or when both accelerators are inert) the forward is bit-for-bit the legacy path.
+
+        Yields ``self`` so it can be used as ``with op.accelerate() as op:``.
+        """
+        use_tc = self.neighbour_search_backend == "torch_cluster"
+        if self._neighbour_cache is None and not use_tc:
+            # Nothing to patch — keep the vendored forward untouched.
+            yield self
+            return
+        with patch_gno_neighbour_search(cache=self._neighbour_cache, use_torch_cluster=use_tc):
+            yield self
 
     @staticmethod
     def _ensure_leading_geom(coords: Tensor, name: str) -> Tensor:
@@ -211,6 +285,29 @@ class DeltaGino(nn.Module):
         super().__init__()
         self.operator = operator
 
+    @property
+    def neighbour_cache(self) -> NeighbourCache | None:
+        """The wrapped operator's per-sample neighbour cache (or ``None``)."""
+        return self.operator.neighbour_cache
+
+    def set_sample_key(self, key: object | None) -> None:
+        """Delegate to the wrapped operator — see :meth:`GinoOperator.set_sample_key`."""
+        self.operator.set_sample_key(key)
+
+    def clear_neighbour_cache(self) -> None:
+        """Delegate to the wrapped operator."""
+        self.operator.clear_neighbour_cache()
+
+    @contextlib.contextmanager
+    def accelerate(self) -> Iterator[DeltaGino]:
+        """Activate the wrapped operator's neighbour cache + search backend.
+
+        Yields ``self`` so ``with model.accelerate() as model:`` reads naturally for the
+        delta wrapper too.
+        """
+        with self.operator.accelerate():
+            yield self
+
     def forward(
         self,
         input_geom: Tensor,
@@ -264,6 +361,9 @@ def build_gino(
     in_gno_transform_type: str = "nonlinear",
     out_gno_transform_type: str = "linear",
     gno_use_open3d: bool = True,
+    cache_neighbours: bool = False,
+    neighbour_search_backend: str = "auto",
+    compile_fno: bool = False,
 ) -> GinoOperator:
     """Construct a :class:`GinoOperator`. See the class for argument semantics."""
     return GinoOperator(
@@ -281,6 +381,9 @@ def build_gino(
         in_gno_transform_type=in_gno_transform_type,
         out_gno_transform_type=out_gno_transform_type,
         gno_use_open3d=gno_use_open3d,
+        cache_neighbours=cache_neighbours,
+        neighbour_search_backend=neighbour_search_backend,
+        compile_fno=compile_fno,
     )
 
 
@@ -299,6 +402,9 @@ def build_delta_gino(
     in_gno_transform_type: str = "nonlinear",
     out_gno_transform_type: str = "linear",
     gno_use_open3d: bool = True,
+    cache_neighbours: bool = False,
+    neighbour_search_backend: str = "auto",
+    compile_fno: bool = False,
 ) -> DeltaGino:
     """Construct a :class:`DeltaGino` wrapping a fresh :class:`GinoOperator`.
 
@@ -325,5 +431,8 @@ def build_delta_gino(
         in_gno_transform_type=in_gno_transform_type,
         out_gno_transform_type=out_gno_transform_type,
         gno_use_open3d=gno_use_open3d,
+        cache_neighbours=cache_neighbours,
+        neighbour_search_backend=neighbour_search_backend,
+        compile_fno=compile_fno,
     )
     return DeltaGino(operator)

@@ -31,6 +31,7 @@ to ``results/block2_benchmark.{json,md}``.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -72,8 +73,15 @@ GNO_RADIUS = 0.12
 U_FACE_BAND = 0.08
 
 
-def _build(kind: str, device: str) -> torch.nn.Module:
-    """Construct a roster model. The two GINO entries share the architecture."""
+def _build(kind: str, device: str, accel: bool = True) -> torch.nn.Module:
+    """Construct a roster model. The two GINO entries share the architecture.
+
+    ``accel`` turns on the GINO GPU-throughput accelerators (per-sample neighbour-graph
+    cache + on-GPU torch_cluster radius search) — a correctness-preserving change (the
+    cached / torch_cluster CRS is set-identical to the native one); see
+    :mod:`thermotwin.models.gino_accel`.
+    """
+    gino_accel = dict(cache_neighbours=accel, neighbour_search_backend="auto")
     if kind == "gino":
         model = build_gino(
             in_channels=3,  # [logk_std, r_si, r_se] — prior dropped (data-only)
@@ -84,6 +92,7 @@ def _build(kind: str, device: str) -> torch.nn.Module:
             in_gno_radius=GNO_RADIUS,
             out_gno_radius=GNO_RADIUS,
             latent_grid=LATENT_GRID,
+            **gino_accel,
         )
     elif kind == "delta_gino":
         model = build_delta_gino(
@@ -95,6 +104,7 @@ def _build(kind: str, device: str) -> torch.nn.Module:
             in_gno_radius=GNO_RADIUS,
             out_gno_radius=GNO_RADIUS,
             latent_grid=LATENT_GRID,
+            **gino_accel,
         )
     elif kind == "fno_voxel":
         model = build_fno(
@@ -107,6 +117,23 @@ def _build(kind: str, device: str) -> torch.nn.Module:
     else:  # pragma: no cover - guarded by ROSTER
         raise KeyError(kind)
     return model.to(device)
+
+
+def _accelerate(model) -> contextlib.AbstractContextManager:
+    """Activate the GINO neighbour-cache/search accelerators if the model exposes them.
+
+    Returns a no-op context for the grid baselines (plain FNO), so callers can wrap any
+    roster model uniformly.
+    """
+    accel = getattr(model, "accelerate", None)
+    return accel() if callable(accel) else contextlib.nullcontext()
+
+
+def _set_sample_key(model, batch: dict) -> None:
+    """Point the GINO neighbour cache at this batch's sample (no-op for grid models)."""
+    setter = getattr(model, "set_sample_key", None)
+    if callable(setter):
+        setter(int(batch["sample_index"][0]))
 
 
 def _forward_cloud(model, kind: str, batch: dict, device: str) -> torch.Tensor:
@@ -146,7 +173,7 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
     rel_l2s, u_pred, u_true, u_clear, times = [], [], [], [], []
     model.eval()
     loader = DataLoader(val_ds, batch_size=1, shuffle=False, collate_fn=collate_pointcloud)
-    with torch.no_grad():
+    with torch.no_grad(), _accelerate(model):
         for batch in loader:
             theta_gt = batch["theta"][0].numpy()  # (n,)
             points = batch["points"][0].numpy()
@@ -158,6 +185,7 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
                 vox_pred = model(vx)[0, 0]  # (G, G, G)
                 pred = _trilinear_sample(vox_pred, batch["points"][0].to(device)).cpu().numpy()
             else:
+                _set_sample_key(model, batch)
                 pred = _forward_cloud(model, kind, batch, device)[0, :, 0].cpu().numpy()
             times.append(time.perf_counter() - t0)
             rel_l2s.append(
@@ -183,25 +211,32 @@ def _train_one(model, kind: str, train_ds, args, device: str) -> float:
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-5)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
     loader = DataLoader(
-        train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=collate_pointcloud
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_pointcloud,
+        num_workers=args.num_workers,
+        pin_memory=(device == "cuda"),
     )
     t0 = time.perf_counter()
-    for _ in range(args.epochs):
-        model.train()
-        for batch in loader:
-            opt.zero_grad()
-            if kind == "fno_voxel":
-                vx = batch["voxel_feats"].to(device)  # (1, F, G, G, G)
-                pred = model(vx)  # (1, 1, G, G, G)
-                target = batch["voxel_theta"].to(device).unsqueeze(1)  # (1, 1, G, G, G)
-            else:
-                pred = _forward_cloud(model, kind, batch, device)  # (1, n, 1)
-                target = batch["theta"].to(device).unsqueeze(-1)  # (1, n, 1)
-            loss = relative_l2(pred, target)
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            opt.step()
-        sched.step()
+    with _accelerate(model):  # activates the GINO neighbour cache for the whole run
+        for _ in range(args.epochs):
+            model.train()
+            for batch in loader:
+                opt.zero_grad()
+                if kind == "fno_voxel":
+                    vx = batch["voxel_feats"].to(device)  # (1, F, G, G, G)
+                    pred = model(vx)  # (1, 1, G, G, G)
+                    target = batch["voxel_theta"].to(device).unsqueeze(1)  # (1, 1, G, G, G)
+                else:
+                    _set_sample_key(model, batch)
+                    pred = _forward_cloud(model, kind, batch, device)  # (1, n, 1)
+                    target = batch["theta"].to(device).unsqueeze(-1)  # (1, n, 1)
+                loss = relative_l2(pred, target)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                opt.step()
+            sched.step()
     return time.perf_counter() - t0
 
 
@@ -234,20 +269,63 @@ def main() -> None:
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
     p.add_argument("--device", default="cuda")
-    p.add_argument("--train_root", default="data/processed/block2_train")
-    p.add_argument("--val_root", default="data/processed/block2_val")
+    p.add_argument("--train_root", default=None)
+    p.add_argument("--val_root", default=None)
+    p.add_argument(
+        "--corpus",
+        choices=["box", "irreg"],
+        default="box",
+        help=(
+            "Which corpus to benchmark. 'box' -> block2_train/val + results/block2_benchmark.*; "
+            "'irreg' -> block2_irreg_train/val + results/block2_irreg_benchmark.*. "
+            "Sets train_root/val_root and output stem unless they are overridden explicitly."
+        ),
+    )
+    p.add_argument("--num_workers", type=int, default=0)
+    p.add_argument(
+        "--no-accel",
+        dest="accel",
+        action="store_false",
+        help="disable the GINO neighbour-cache/GPU-search accelerators (default: on)",
+    )
+    p.set_defaults(accel=True)
     a = p.parse_args()
+
+    # Resolve the corpus -> default roots + output stem. Explicit --train_root/--val_root
+    # win over the corpus default so the runner stays fully overridable.
+    corpus_defaults = {
+        "box": ("data/processed/block2_train", "data/processed/block2_val", "block2_benchmark"),
+        "irreg": (
+            "data/processed/block2_irreg_train",
+            "data/processed/block2_irreg_val",
+            "block2_irreg_benchmark",
+        ),
+    }
+    default_train, default_val, out_stem = corpus_defaults[a.corpus]
+    if a.train_root is None:
+        a.train_root = default_train
+    if a.val_root is None:
+        a.val_root = default_val
 
     device = a.device if (a.device == "cpu" or torch.cuda.is_available()) else "cpu"
     train_root, val_root = _REPO / a.train_root, _REPO / a.val_root
 
     # The two GINO entries train on the cloud; fno_voxel needs the dense voxel field.
     need_voxel = "fno_voxel" in a.models
+    # The corpus is a few MB: cache it in RAM so np.load is paid once, not per step.
     train_ds = PointCloudDataset(
-        train_root, latent_grid=LATENT_GRID, voxelise=need_voxel, voxel_grid=VOXEL_GRID
+        train_root,
+        latent_grid=LATENT_GRID,
+        voxelise=need_voxel,
+        voxel_grid=VOXEL_GRID,
+        cache_in_memory=True,
     )
     val_ds = PointCloudDataset(
-        val_root, latent_grid=LATENT_GRID, voxelise=need_voxel, voxel_grid=VOXEL_GRID
+        val_root,
+        latent_grid=LATENT_GRID,
+        voxelise=need_voxel,
+        voxel_grid=VOXEL_GRID,
+        cache_in_memory=True,
     )
     # Latent queries are shared across the corpus (one fixed latent grid).
     _ = latent_grid_coords(LATENT_GRID)
@@ -259,7 +337,7 @@ def main() -> None:
         params = None
         for seed in a.seeds:
             seed_everything(seed)
-            model = _build(kind, device)
+            model = _build(kind, device, accel=a.accel)
             params = sum(q.numel() for q in model.parameters())
             train_s = _train_one(model, kind, train_ds, a, device)
             m = _eval_model(model, kind, val_ds, device)
@@ -292,19 +370,26 @@ def main() -> None:
             "latent_grid": LATENT_GRID,
             "voxel_grid": VOXEL_GRID,
             "u_face_band": U_FACE_BAND,
+            "gino_accel": a.accel,
         },
         "results": results,
     }
-    (out / "block2_benchmark.json").write_text(json.dumps(report, indent=2))
-    _write_markdown(out / "block2_benchmark.md", report)
-    print(f"\nwrote {out / 'block2_benchmark.json'} and .md")
+    (out / f"{out_stem}.json").write_text(json.dumps(report, indent=2))
+    _write_markdown(out / f"{out_stem}.md", report)
+    print(f"\nwrote {out / f'{out_stem}.json'} and .md")
 
 
 def _write_markdown(path: Path, report: dict) -> None:
     cfg = report["config"]
+    corpus = cfg.get("corpus", "box")
+    corpus_label = {
+        "box": "axis-aligned box corpus",
+        "irreg": "rotated / off-lattice irregular corpus",
+    }.get(corpus, corpus)
     lines = [
-        "# Block-2 Benchmark — 3-D irregular wall blocks (GINO vs grid FNO)",
+        f"# Block-2 Benchmark — 3-D wall blocks · {corpus_label} (GINO vs grid FNO)",
         "",
+        f"- corpus: `{corpus}` · train: `{cfg['train_root']}` · val: `{cfg['val_root']}`",
         f"- device: `{cfg['device']}` · epochs: {cfg['epochs']} · batch: {cfg['batch_size']} "
         f"· seeds: {cfg['seeds']} · latent/voxel grid: {cfg['latent_grid']}",
         "- U-value derived from the predicted field at the indoor face "
