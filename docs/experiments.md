@@ -292,30 +292,47 @@ never touches the target U (leakage-free). Each model is run over seeds `[1337, 
 150 epochs, AdamW + cosine, batch 1. Runner: `scripts/benchmark_block2.py` →
 `results/block2_benchmark.{json,md}`.
 
-#### Results — **pending** (benchmark in flight)
+#### Results — first pass (job 26446105, feit-gpu-a100, **60 ep, 1 seed**)
 
-> **Honest status (2026-06-24): no numbers yet.** The producing Slurm job
-> **26440168** (`tt3d-block2`, A100 `spartan-gpgpu120`, CUDA confirmed) is **still
-> running** inside its 3-h allocation and has not yet emitted a single per-seed result
-> line; `benchmark_block2.py` writes `results/block2_benchmark.{json,md}` only after all
-> 6 runs (3 models × 2 seeds) finish, so the artefact does not exist. **No values are
-> reported here rather than fabricated.** The harness is verified to answer the two
-> questions below once it lands; this section will be filled from the real JSON.
+A *directional* run only — the GINO GPU bottleneck (below) capped what we could
+afford, so this is undertrained (60 ep vs Block-1's 300) and single-seed (`±0.0000`
+is *one seed*, not consistency). Reported as-is.
 
-What the numbers will decide, and the bar each must clear:
+| Model | Field rel-L2 ↓ | U-MAE ↓ (W/m²K) | U-MAPE | vs 1-D clear |
+|---|---|---|---|---|
+| **fno_voxel** (grid baseline) | **0.0202** | **0.0475** | 11.3% | 1.63× |
+| gino | 0.0238 | 0.0539 | 12.4% | 1.44× |
+| delta_gino | 0.0243 | 0.0516 | 11.8% | 1.50× |
 
-- **Did the delta prior carry to 3-D?** → `delta_prior_carries_to_3d = TRUE` iff
-  `delta_gino`'s field rel-L2 **and** U-MAE are materially below `gino`'s (the data-only
-  operator with the prior dropped), mirroring the Block-1 `delta_fno` win. If the gap is
-  within seed σ, the honest read is that the additive prior helps less on the cloud than
-  it did on the grid, and that finding gets reported as-is.
-- **GINO vs voxel-FNO.** → GINO "justifies itself" only if `delta_gino`'s rel-L2 and
-  U-MAE are ≤ `fno_voxel`'s **despite never seeing a grid**. If the voxel-FNO ties or
-  wins on these simple box geometries, the honest conclusion is that a voxel-FNO suffices
-  *here* and GINO's value must be argued on irregular/real scans (Exp 2.2+), not synthetic
-  blocks — the grid baseline is in the roster precisely to keep us honest about that.
-- **The bar both geometry-aware models must beat (H1):** the geometry-blind 1-D
-  clear-wall U-MAE (`u_mae_clear_baseline`), reported alongside every row.
+1-D clear-wall baseline U-MAE: 0.0776 W/m²K.
+
+**Answers to the two questions:**
+- **Did the delta prior carry to 3-D? — Marginally / not yet.** `delta_gino` improves
+  U-MAE over `gino` by only ~4 % (0.0516 vs 0.0539) and is slightly *worse* on field
+  error — nothing like the −57 % the additive prior bought on the 2-D grid. Single
+  seed + 60 ep means even this could be noise. Verdict: the prior does **not** carry
+  strongly to the cloud/GINO setting in this configuration.
+- **GINO vs voxel-FNO — the grid baseline wins.** `fno_voxel` beats both GINO models
+  on both metrics. This is the *expected* outcome and the reason the baseline is in the
+  roster: **a grid FNO suffices on axis-aligned box geometries — GINO has no edge where
+  the geometry is regular.** Its value proposition is *irregular* as-built geometry,
+  which this synthetic block does not exercise.
+
+**What this does and does not establish.** It establishes that the machinery works
+end-to-end (GINO + delta_gino train, the point-cloud→U-value pipeline is sane, the
+metrics are well-behaved) and that all three only modestly beat the geometry-blind
+baseline (1.4–1.6×, vs 5–11× in 2-D — the 3-D bridges carry a smaller U-penalty here,
+~13–27 % vs 40–50 %). It does **not** yet test GINO's actual advantage. Two structural
+limits to lift before any real conclusion:
+1. **GINO GPU efficiency.** Training was CPU-bound (~10 min/model for 60 ep): Open3D in
+   this env is CPU-only and, even after installing the CUDA `torch_scatter`/`torch_cluster`
+   wheels, batch-1 GINO on ~2 k-point clouds is *launch-overhead-bound* (thousands of
+   µs kernels driven by the per-sample Python loop). A full 300-ep × multi-seed run is
+   ~5 h as-is. Fix (TODO, ADR-worthy): batch samples per step / `torch.compile` / CUDA
+   graphs. See `docs/compute.md`.
+2. **Geometry that needs GINO.** Benchmark on the **real CityGML buildings** (below) or
+   genuinely irregular synthetic geometry — Exp 2.2 — where a voxel grid is a poor fit
+   and GINO's point-cloud/SDF encoding should finally pay off.
 
 ### CityGML real-geometry ingestion (TUM2TWIN) — landed
 

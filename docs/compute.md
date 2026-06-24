@@ -57,7 +57,7 @@ Most recent first. `R`=running, `C`=completed, `X`=cancelled, `TO`=timeout.
 
 | Job ID | Date | Partition | What | Config | Status | Result |
 |---|---|---|---|---|---|---|
-| 26446105 | 2026-06-24 | feit-gpu-a100 | Block-2 GINO benchmark | 60 ep, 1 seed (reduced) | R | `results/block2_benchmark.{json,md}` |
+| 26446105 | 2026-06-24 | feit-gpu-a100 | Block-2 GINO benchmark | 60 ep, 1 seed (reduced) | C (30 min) | voxel-FNO won; GINO undertrained on box geom — see Exp 2.1 |
 | 26445982 | 2026-06-24 | feit-gpu-a100 | Block-2 benchmark | 150 ep, 2 seed | X | CPU-bound; would exceed walltime |
 | 26444333 | 2026-06-24 | feit-gpu-a100 | Block-2 benchmark | 150 ep (post open3d/scatter fix) | X | still CPU-bound (batch-1 overhead) |
 | 26442698 | 2026-06-24 | gpu-h100 | Block-2 benchmark | — | X | queued on `(Resources)`, switched to FEIT |

@@ -1,0 +1,119 @@
+{
+  "config": {
+    "models": [
+      "gino",
+      "delta_gino",
+      "fno_voxel"
+    ],
+    "epochs": 60,
+    "batch_size": 1,
+    "lr": 0.001,
+    "seeds": [
+      1337
+    ],
+    "device": "cuda",
+    "train_root": "data/processed/block2_train",
+    "val_root": "data/processed/block2_val",
+    "latent_grid": 16,
+    "voxel_grid": 16,
+    "u_face_band": 0.08
+  },
+  "results": [
+    {
+      "model": "gino",
+      "kind": "gino",
+      "params": 2807892,
+      "seeds": [
+        1337
+      ],
+      "field_rel_l2_mean": 0.02377529686782509,
+      "field_rel_l2_std": 0.0,
+      "u_mae_mean": 0.05388758316866099,
+      "u_mae_std": 0.0,
+      "u_mape_mean": 12.363053446179439,
+      "u_mape_std": 0.0,
+      "u_mae_clear_baseline_mean": 0.07758667832240462,
+      "u_mae_clear_baseline_std": 0.0,
+      "u_improvement_x_mean": 1.43978767946539,
+      "u_improvement_x_std": 0.0,
+      "infer_ms_per_sample_mean": 8.533596199413296,
+      "infer_ms_per_sample_std": 0.0,
+      "per_seed": [
+        {
+          "field_rel_l2": 0.02377529686782509,
+          "u_mae": 0.05388758316866099,
+          "u_mape": 12.363053446179439,
+          "u_mae_clear_baseline": 0.07758667832240462,
+          "u_improvement_x": 1.43978767946539,
+          "infer_ms_per_sample": 8.533596199413296,
+          "seed": 1337,
+          "train_time_s": 629.6
+        }
+      ]
+    },
+    {
+      "model": "delta_gino",
+      "kind": "delta_gino",
+      "params": 2808181,
+      "seeds": [
+        1337
+      ],
+      "field_rel_l2_mean": 0.024342516596334463,
+      "field_rel_l2_std": 0.0,
+      "u_mae_mean": 0.05156398723077668,
+      "u_mae_std": 0.0,
+      "u_mape_mean": 11.766802321470008,
+      "u_mape_std": 0.0,
+      "u_mae_clear_baseline_mean": 0.07758667832240462,
+      "u_mae_clear_baseline_std": 0.0,
+      "u_improvement_x_mean": 1.5046679376279097,
+      "u_improvement_x_std": 0.0,
+      "infer_ms_per_sample_mean": 8.234799955971539,
+      "infer_ms_per_sample_std": 0.0,
+      "per_seed": [
+        {
+          "field_rel_l2": 0.024342516596334463,
+          "u_mae": 0.05156398723077668,
+          "u_mape": 11.766802321470008,
+          "u_mae_clear_baseline": 0.07758667832240462,
+          "u_improvement_x": 1.5046679376279097,
+          "infer_ms_per_sample": 8.234799955971539,
+          "seed": 1337,
+          "train_time_s": 626.0
+        }
+      ]
+    },
+    {
+      "model": "fno_voxel",
+      "kind": "fno_voxel",
+      "params": 2410689,
+      "seeds": [
+        1337
+      ],
+      "field_rel_l2_mean": 0.02017065962718334,
+      "field_rel_l2_std": 0.0,
+      "u_mae_mean": 0.04749062115979813,
+      "u_mae_std": 0.0,
+      "u_mape_mean": 11.279460755386307,
+      "u_mape_std": 0.0,
+      "u_mae_clear_baseline_mean": 0.07758667832240462,
+      "u_mae_clear_baseline_std": 0.0,
+      "u_improvement_x_mean": 1.633726332223329,
+      "u_improvement_x_std": 0.0,
+      "infer_ms_per_sample_mean": 18.259218755702022,
+      "infer_ms_per_sample_std": 0.0,
+      "per_seed": [
+        {
+          "field_rel_l2": 0.02017065962718334,
+          "u_mae": 0.04749062115979813,
+          "u_mape": 11.279460755386307,
+          "u_mae_clear_baseline": 0.07758667832240462,
+          "u_improvement_x": 1.633726332223329,
+          "infer_ms_per_sample": 18.259218755702022,
+          "seed": 1337,
+          "train_time_s": 581.4
+        }
+      ]
+    }
+  ]
+}
