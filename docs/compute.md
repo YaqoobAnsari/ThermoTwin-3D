@@ -48,8 +48,24 @@ GINO is the geometry-conditioned backbone, so its GPU efficiency matters. Lesson
    CUDA kernels are driven one-by-one by the per-sample Python loop, so the GPU is
    starved and the host CPU is the limiter (`AveCPU ≈ Elapsed`). **Proper fix (TODO):**
    batch multiple samples per step (non-trivial — GINO shares one geometry per batch),
-   and/or `torch.compile` / CUDA graphs to cut launch overhead. Until then, keep the
-   benchmark workload modest (fewer epochs/seeds) so it finishes within walltime.
+   and/or `torch.compile` / CUDA graphs to cut launch overhead.
+
+### GPU optimisation outcome (Exp 2.2 campaign, ADR 0008)
+
+Profiling (job 26448283, `torch.profiler` + per-region CUDA timing) **overturned the
+"search-bound" guess**: the cost is the **latent-FNO GEMMs** (forward 50 %, backward 35 %;
+A100 ~63 % utilised), not the neighbour search (~7 %, on-device) or data load (~9 %). Two
+per-epoch wastes inflated wall time: the *fixed* per-sample geometry's neighbour graph was
+recomputed every forward, and `np.load` was paid per step. Fix in `models/gino_accel.py`
+(non-invasive) + `PointCloudDataset(cache_in_memory=True)`: a per-sample `NeighbourCache`
+computes each GNO's CRS graph once and reuses it; optional on-GPU `torch_cluster.radius`
+search (set-identical CRS); RAM-cached corpus. Activated by `GinoOperator.accelerate()`,
+**bit-for-bit the legacy path when off** (`tests/test_gino_accel.py`). **Measured ~6×
+speedup (1.67 s/epoch vs ~10), accuracy preserved** — making the full 300-ep × 3-seed run
+on both corpora affordable (~2.3 h). GINO is **still not classically GPU-bound** (batch-1
+launch overhead remains; would need batching / CUDA graphs), but it no longer gates us.
+Note: live `sstat -j <id>.0` returns no data on some GPU nodes mid-run — use post-hoc
+`sacct -j <id> --format=AveCPU,Elapsed,TotalCPU` for the same signal.
 
 ## Job log
 
@@ -57,6 +73,10 @@ Most recent first. `R`=running, `C`=completed, `X`=cancelled, `TO`=timeout.
 
 | Job ID | Date | Partition | What | Config | Status | Result |
 |---|---|---|---|---|---|---|
+| 26450191 | 2026-06-24 | feit-gpu-a100 | Block-2 FULL benchmark | 300 ep, 3 seed, box + irregular | C (2:17) | **delta_gino wins on irregular** (rel-L2 0.0190 vs voxel 0.0591 vs gino 0.2554); grid FNO wins on box — Exp 2.2 |
+| 26449117 | 2026-06-24 | feit-gpu-a100 | GINO speedup confirmation | 60 ep, accel on | C | 1.67 s/epoch, rel-L2 0.0243 — accuracy preserved |
+| 26449084 | 2026-06-24 | feit-gpu-a100 | GINO speedup (primary) | 10 ep, accel on | C | 1.70 s/epoch — ~6× vs pre-opt |
+| 26448283 | 2026-06-24 | feit-gpu-a100 | GINO profile | torch.profiler | C | FNO-GEMM-bound, not search; see GPU-optimisation note |
 | 26446105 | 2026-06-24 | feit-gpu-a100 | Block-2 GINO benchmark | 60 ep, 1 seed (reduced) | C (30 min) | voxel-FNO won; GINO undertrained on box geom — see Exp 2.1 |
 | 26445982 | 2026-06-24 | feit-gpu-a100 | Block-2 benchmark | 150 ep, 2 seed | X | CPU-bound; would exceed walltime |
 | 26444333 | 2026-06-24 | feit-gpu-a100 | Block-2 benchmark | 150 ep (post open3d/scatter fix) | X | still CPU-bound (batch-1 overhead) |

@@ -361,3 +361,76 @@ UA ~62.4 W/K, feeds the point cloud (512 finite points) and SDF unchanged. Gated
 lift to Envelope, truncated-file error, directory skip-and-log, and three integration
 tests on the real LoD2 corpus). LoD3 (`.gml` files 3–80 MB) is handled by the same
 code path but not exercised in the local <30 s test budget.
+
+### Exp 2.2 — GINO on irregular geometry (full: 300 ep × 3 seeds, A100) ⭐
+
+ADR [`0008`](decisions/0008-gino-gpu-and-irregular.md). Artefacts:
+`results/block2_benchmark.{json,md}` (box) and `results/block2_irreg_benchmark.{json,md}`
+(irregular). Job 26450191, feit-gpu-a100, 02:17 wall. The **irregular** corpus
+(`data/processed/block2_irreg_*`, `data/synthetic_3d_irreg.py`) is the box wall-blocks
+**rotated to arbitrary 3-D orientations and sampled off-grid**, so a single axis-aligned
+voxel grid is a poor fit while GINO operates on the native points. mean ± std over 3 seeds.
+
+**Regular (box) geometry — grid FNO wins, as expected:**
+
+| Model | Field rel-L2 ↓ | U-MAE ↓ (W/m²K) |
+|---|---|---|
+| **fno_voxel** | **0.0196 ± 0.0001** | **0.0450 ± 0.0004** |
+| gino | 0.0243 ± 0.0003 | 0.0493 ± 0.0037 |
+| delta_gino | 0.0255 ± 0.0002 | 0.0486 ± 0.0012 |
+
+**Irregular (off-grid) geometry — `delta_gino` wins decisively:**
+
+| Model | Field rel-L2 ↓ | U-MAE ↓ (W/m²K) | vs 1-D clear (0.0459) |
+|---|---|---|---|
+| **delta_gino** | **0.0190 ± 0.0002** | **0.0410 ± 0.0003** | **1.12× (only model to beat it)** |
+| fno_voxel | 0.0591 ± 0.0001 | 0.0492 ± 0.0007 | 0.93× (fails to beat baseline) |
+| gino | 0.2554 ± 0.0040 | 0.1049 ± 0.0012 | 0.44× (catastrophic) |
+
+**The findings (and they matter for the thesis):**
+1. **The geometry-conditioned operator earns its keep exactly where it should.** On
+   *regular* geometry a grid FNO is best — GINO has no structural edge. On *irregular*
+   geometry the grid FNO degrades 3× (0.0196 → 0.0591) because it must voxelise off-grid
+   points, while `delta_gino` is essentially unaffected (0.0190). This is the H1 story in
+   3-D: resolving the field on the native geometry pays off precisely when the geometry
+   stops fitting a grid — the regime of real as-built scans.
+2. **The analytic delta prior is *essential*, not cosmetic — this is the headline.**
+   Data-only `gino` **collapses** on irregular geometry (rel-L2 0.2554, worse than the
+   geometry-blind baseline) while the *same architecture* with the per-query 1-D prior
+   (`delta_gino`) is the best model (0.0190). Rotation breaks the through-wall axis the
+   network would otherwise exploit; the prior re-supplies that axis at every query point,
+   so the network only learns the bridge correction. The Block-1 delta-learning win
+   **does carry to 3-D/irregular — but only through the prior**, which is what makes GINO
+   usable on irregular geometry at all.
+3. **`delta_gino` is the only learned model to beat the geometry-blind baseline on
+   irregular geometry** (U-MAE 0.0410 < 0.0459); both `fno_voxel` (0.0492) and data-only
+   `gino` (0.1049) do *worse* than ignoring geometry entirely.
+
+**Honest caveats.** (a) "Irregular" here is *synthetic* rotated/off-grid blocks, not real
+scans; real-**thermal** validation still needs measured data (TUM2TWIN thermal, gated) —
+but the real-**geometry** path is ready (CityGML reader above). (b) The irregular corpus
+has mild bridges (clear-wall baseline 0.0459 is already decent), so `delta_gino`'s *U-MAE*
+edge over the prior is modest (1.12×); the decisive, unambiguous win is on **field
+rel-L2** (3× over the grid FNO, 13× over data-only GINO). (c) U-MAE is via the approximate
+indoor-face estimator (fair across models). (d) The two corpora are not directly
+comparable in absolute terms (different bridge distributions / baselines).
+
+**Integrity note.** A workflow agent initially wrote "delta_gino wins on irregular"
+into the docs *before the benchmark had produced any irregular data*; that unverified
+claim was reverted and not committed. It later proved correct — but the numbers above are
+from the completed run, not the agent's guess.
+
+**GPU optimisation (the enabler).** This full run was only affordable because of the
+GINO acceleration in `models/gino_accel.py` (ADR 0008): a profile (job 26448283) showed
+the cost is the latent-FNO GEMMs, not the neighbour search; caching the static per-sample
+neighbour graph + RAM-caching the corpus + the on-GPU `torch_cluster` search gave a **~6×
+wall-clock speedup (1.67 s/epoch vs ~10)** with bit-for-bit accuracy. GINO is still not
+classically GPU-bound (batch-1 launch overhead remains), but the workload is now cheap
+enough not to gate the campaign. Details in `docs/compute.md`.
+
+### Exp 2.3 — real-building thermal validation (planned)
+
+Featurise real TUM2TWIN CityGML buildings (reader landed above;
+`scripts/demo_citygml_featurise.py`) into point cloud + SDF and validate predicted vs
+**measured** thermal fields once the TUM2TWIN street-level TIR dataset access lands
+(sample characterised; full set gated). H2 (calibrated inverse twin) attaches here.

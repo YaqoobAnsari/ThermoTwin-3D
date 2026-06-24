@@ -7,6 +7,21 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Block-2 Exp 2.2 — GINO on irregular geometry (the geometry-conditioned operator
+  earns its keep).** Full 300-ep × 3-seed benchmark (job 26450191): on *regular* boxes
+  the grid FNO wins (rel-L2 0.0196 vs GINO 0.0243), but on *irregular* (rotated/off-grid)
+  geometry **`delta_gino` wins decisively** — field rel-L2 **0.0190** vs grid FNO 0.0591
+  (3×) vs data-only GINO 0.2554 (13×) — and is the **only** learned model to beat the
+  geometry-blind baseline. Key finding: the analytic delta prior is *essential* — data-only
+  GINO collapses on irregular geometry while the prior-conditioned `delta_gino` is best.
+  `data/synthetic_3d_irreg.py` (irregular corpus), `scripts/demo_citygml_featurise.py`
+  (real building → cloud + SDF). See Exp 2.2 + ADR 0008.
+- **GINO GPU acceleration (~6×)** — `models/gino_accel.py` + `GinoOperator.accelerate()`:
+  per-sample neighbour-graph caching (the static geometry's CRS graph is computed once,
+  not every forward), on-GPU `torch_cluster` radius search, RAM-cached corpus
+  (`PointCloudDataset(cache_in_memory)`); bit-for-bit the legacy path when off. Profiling
+  (`scripts/profile_gino.py`) located the true cost as the latent-FNO GEMMs, not the
+  neighbour search. 1.67 s/epoch (vs ~10), accuracy preserved, full runs affordable.
 - **`docs/experiments.md`** — the running, paper-grade record of every experiment:
   setup, **all** variants (winners and losers), numbers, and conclusions, with raw
   artefacts in `results/*.json`/`*.md`. Consolidates Exp 1.1 (first benchmark),

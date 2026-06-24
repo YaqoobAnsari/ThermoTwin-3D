@@ -1,0 +1,191 @@
+{
+  "config": {
+    "models": [
+      "gino",
+      "delta_gino",
+      "fno_voxel"
+    ],
+    "epochs": 300,
+    "batch_size": 1,
+    "lr": 0.001,
+    "seeds": [
+      1337,
+      1,
+      2
+    ],
+    "device": "cuda",
+    "train_root": "data/processed/block2_irreg_train",
+    "val_root": "data/processed/block2_irreg_val",
+    "corpus": "irreg",
+    "num_workers": 0,
+    "accel": true,
+    "latent_grid": 16,
+    "voxel_grid": 16,
+    "u_face_band": 0.08,
+    "gino_accel": true
+  },
+  "results": [
+    {
+      "model": "gino",
+      "kind": "gino",
+      "params": 2807892,
+      "seeds": [
+        1337,
+        1,
+        2
+      ],
+      "field_rel_l2_mean": 0.2554229332599789,
+      "field_rel_l2_std": 0.003952519554091117,
+      "u_mae_mean": 0.10487547425276172,
+      "u_mae_std": 0.0012414062436597478,
+      "u_mape_mean": 33.39057673151351,
+      "u_mape_std": 0.42002196192779273,
+      "u_mae_clear_baseline_mean": 0.04593135789036751,
+      "u_mae_clear_baseline_std": 0.0,
+      "u_improvement_x_mean": 0.4380219460084464,
+      "u_improvement_x_std": 0.005156699182455412,
+      "infer_ms_per_sample_mean": 11.274840820988175,
+      "infer_ms_per_sample_std": 0.2828438862879032,
+      "per_seed": [
+        {
+          "field_rel_l2": 0.2557729424443096,
+          "u_mae": 0.10656093860455632,
+          "u_mape": 33.983269110789074,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 0.4310337210975315,
+          "infer_ms_per_sample": 11.674550412863027,
+          "seed": 1337,
+          "train_time_s": 518.0
+        },
+        {
+          "field_rel_l2": 0.26007925730664283,
+          "u_mae": 0.10445823194962092,
+          "u_mape": 33.12835502596001,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 0.43971027494051124,
+          "infer_ms_per_sample": 11.061750556109473,
+          "seed": 1,
+          "train_time_s": 505.3
+        },
+        {
+          "field_rel_l2": 0.25041660002898425,
+          "u_mae": 0.10360725220410794,
+          "u_mape": 33.060106057791465,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 0.4433218419872964,
+          "infer_ms_per_sample": 11.088221493992023,
+          "seed": 2,
+          "train_time_s": 506.6
+        }
+      ]
+    },
+    {
+      "model": "delta_gino",
+      "kind": "delta_gino",
+      "params": 2808181,
+      "seeds": [
+        1337,
+        1,
+        2
+      ],
+      "field_rel_l2_mean": 0.01898753501942944,
+      "field_rel_l2_std": 0.0002345978225867387,
+      "u_mae_mean": 0.04103763630195306,
+      "u_mae_std": 0.0003227630576093316,
+      "u_mape_mean": 11.633533744013869,
+      "u_mape_std": 0.0766791740930554,
+      "u_mae_clear_baseline_mean": 0.04593135789036751,
+      "u_mae_clear_baseline_std": 0.0,
+      "u_improvement_x_mean": 1.1193184649370342,
+      "u_improvement_x_std": 0.008756213581433468,
+      "infer_ms_per_sample_mean": 11.263075471409442,
+      "infer_ms_per_sample_std": 0.14507236161780612,
+      "per_seed": [
+        {
+          "field_rel_l2": 0.019313940207212,
+          "u_mae": 0.04149263630098238,
+          "u_mape": 11.741926473831871,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 1.106976128419202,
+          "infer_ms_per_sample": 11.462547059636563,
+          "seed": 1337,
+          "train_time_s": 505.6
+        },
+        {
+          "field_rel_l2": 0.018875800353271188,
+          "u_mae": 0.04077858891429805,
+          "u_mape": 11.582131247630906,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 1.1263596684745205,
+          "infer_ms_per_sample": 11.121778887172695,
+          "seed": 1,
+          "train_time_s": 507.4
+        },
+        {
+          "field_rel_l2": 0.01877286449780513,
+          "u_mae": 0.04084168369057875,
+          "u_mape": 11.576543510578828,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 1.1246195979173803,
+          "infer_ms_per_sample": 11.204900467419066,
+          "seed": 2,
+          "train_time_s": 505.8
+        }
+      ]
+    },
+    {
+      "model": "fno_voxel",
+      "kind": "fno_voxel",
+      "params": 2410689,
+      "seeds": [
+        1337,
+        1,
+        2
+      ],
+      "field_rel_l2_mean": 0.05914544347130383,
+      "field_rel_l2_std": 0.00011072552490724124,
+      "u_mae_mean": 0.049231766963757896,
+      "u_mae_std": 0.0006906154698891465,
+      "u_mape_mean": 14.908520256666302,
+      "u_mape_std": 0.17181037604639968,
+      "u_mae_clear_baseline_mean": 0.04593135789036751,
+      "u_mae_clear_baseline_std": 0.0,
+      "u_improvement_x_mean": 0.9331437875957821,
+      "u_improvement_x_std": 0.012973475578284027,
+      "infer_ms_per_sample_mean": 3.3516701878397726,
+      "infer_ms_per_sample_std": 0.2590084647611461,
+      "per_seed": [
+        {
+          "field_rel_l2": 0.05905547505244613,
+          "u_mae": 0.048869886793728334,
+          "u_mape": 14.811979349575633,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 0.9398703558335654,
+          "infer_ms_per_sample": 3.6242437054170296,
+          "seed": 1337,
+          "train_time_s": 327.0
+        },
+        {
+          "field_rel_l2": 0.05907943454803899,
+          "u_mae": 0.048627082044219096,
+          "u_mape": 14.763689446830503,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 0.9445633165609191,
+          "infer_ms_per_sample": 3.427293398999609,
+          "seed": 1,
+          "train_time_s": 320.1
+        },
+        {
+          "field_rel_l2": 0.059301420813426375,
+          "u_mae": 0.050198332053326286,
+          "u_mape": 15.149891973592775,
+          "u_mae_clear_baseline": 0.04593135789036751,
+          "u_improvement_x": 0.9149976903928616,
+          "infer_ms_per_sample": 3.003473459102679,
+          "seed": 2,
+          "train_time_s": 319.7
+        }
+      ]
+    }
+  ]
+}
