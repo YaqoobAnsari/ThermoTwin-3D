@@ -12,6 +12,6 @@ latent_grid: 16            # side length G of the cubic latent grid (validates n
 latent_feature_channels: 1 # the SDF, fed on the latent grid as latent_features
 in_gno_transform_type: nonlinear   # decouples feature width from latent width (the verified fix)
 out_gno_transform_type: linear
-gno_use_open3d: true
+gno_use_open3d: false   # native torch search runs on GPU; Open3D here is CPU-only (no CUDA build)
 # NOTE: not built via build_model (point-cloud forward, not the grid contract).
 # The Block-2 runner calls thermotwin.models.build_gino(**model_cfg) directly.

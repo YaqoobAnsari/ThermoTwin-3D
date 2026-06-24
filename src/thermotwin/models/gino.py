@@ -83,7 +83,11 @@ class GinoOperator(nn.Module):
             decouples the feature width from the latent width — required when
             ``in_channels != fno_in_channels``.
         out_gno_transform_type: output-GNO integral-transform type.
-        gno_use_open3d: use Open3D's fixed-radius search (present on CPU and GPU).
+        gno_use_open3d: use Open3D's fixed-radius neighbour search. Default False:
+            the Open3D build in this env is CPU-only (no CUDA), which forces the
+            GNO search onto a single CPU core and starves the GPU; the native torch
+            search follows the tensors to CUDA and keeps GINO GPU-bound. Enable only
+            if a CUDA-capable Open3D is installed and the point cloud is large.
     """
 
     def __init__(
@@ -101,7 +105,7 @@ class GinoOperator(nn.Module):
         latent_feature_channels: int | None = 1,
         in_gno_transform_type: str = "nonlinear",
         out_gno_transform_type: str = "linear",
-        gno_use_open3d: bool = True,
+        gno_use_open3d: bool = False,
     ) -> None:
         super().__init__()
         fno_n_modes = tuple(int(m) for m in fno_n_modes)

@@ -12,7 +12,7 @@ latent_grid: 16            # side length G of the cubic latent grid (validates n
 latent_feature_channels: 1 # the SDF, fed on the latent grid as latent_features
 in_gno_transform_type: nonlinear   # decouples feature width from latent width (the verified fix)
 out_gno_transform_type: linear
-gno_use_open3d: true
+gno_use_open3d: false   # native torch search runs on GPU; Open3D here is CPU-only (no CUDA build)
 # Forward = query_prior + gino_correction. query_prior is the analytic 1-D theta at each
 # output query's through-wall coordinate, supplied per-query by the Block-2 dataset
 # (mirrors delta_fno's additive structure). Built via thermotwin.models.build_delta_gino.
