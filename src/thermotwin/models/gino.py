@@ -60,8 +60,10 @@ class GinoOperator(nn.Module):
     Fixes the verified-good construction (``in_gno_transform_type='nonlinear'`` so the
     per-point feature width is free of the FNO latent width; the SDF carried as
     ``latent_features`` with ``latent_feature_channels=1``;
-    ``gno_use_torch_scatter=False`` since ``torch_scatter`` is absent and GINO falls
-    back silently) and normalises the leading dims expected by GINO's forward.
+    ``gno_use_torch_scatter=True`` — the CUDA ``torch_scatter`` build is installed, so
+    the GNO scatter-reduce runs as a fused GPU kernel instead of the CPU fallback that
+    previously starved the A100 and made training CPU-bound) and normalises the leading
+    dims expected by GINO's forward.
 
     Args:
         in_channels: per-input-point feature width (e.g. 4 for the Block-2 layout
@@ -126,7 +128,7 @@ class GinoOperator(nn.Module):
             out_gno_radius=float(out_gno_radius),
             latent_feature_channels=latent_feature_channels,
             gno_use_open3d=bool(gno_use_open3d),
-            gno_use_torch_scatter=False,
+            gno_use_torch_scatter=True,
         )
 
     @staticmethod

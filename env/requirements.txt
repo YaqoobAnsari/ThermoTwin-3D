@@ -31,3 +31,9 @@ ruff
 mypy
 pre-commit
 nbstripout
+
+# GINO GPU acceleration (GNO scatter + radius search) — install with the matching
+# CUDA wheel index, e.g.:  pip install torch_scatter torch_cluster \
+#   -f https://data.pyg.org/whl/torch-2.5.1+cu121.html
+torch_scatter
+torch_cluster
