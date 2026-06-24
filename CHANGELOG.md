@@ -7,15 +7,17 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
-- **Block-2 Exp 2.2 — GINO on irregular geometry (the geometry-conditioned operator
-  earns its keep).** Full 300-ep × 3-seed benchmark (job 26450191): on *regular* boxes
-  the grid FNO wins (rel-L2 0.0196 vs GINO 0.0243), but on *irregular* (rotated/off-grid)
-  geometry **`delta_gino` wins decisively** — field rel-L2 **0.0190** vs grid FNO 0.0591
-  (3×) vs data-only GINO 0.2554 (13×) — and is the **only** learned model to beat the
-  geometry-blind baseline. Key finding: the analytic delta prior is *essential* — data-only
-  GINO collapses on irregular geometry while the prior-conditioned `delta_gino` is best.
-  `data/synthetic_3d_irreg.py` (irregular corpus), `scripts/demo_citygml_featurise.py`
-  (real building → cloud + SDF). See Exp 2.2 + ADR 0008.
+- **Block-2 Exp 2.2 — GINO on irregular geometry (PRELIMINARY; flagged for re-run).**
+  Full 300-ep × 3-seed benchmark (job 26450191): on regular boxes the grid FNO wins;
+  on irregular geometry `delta_gino` (0.0190) beats the grid FNO (0.0591) and the
+  zero-network prior-alone control (0.0257). **A post-hoc integrity audit found the
+  experiment confounded** — all irregular samples have points outside `[0,1]³` (a
+  coordinate-normalisation bug that partly *breaks* data-only GINO, inflating its 0.2554),
+  and the prior-alone baseline was missing from the roster. The "prior is essential"
+  headline is therefore **not earned**; what survives is that `delta_gino` beats the
+  prior-alone by ~26–32 %. Exp 2.2 is to be re-run with renormalised coordinates + the
+  prior-alone row + non-trivial bridges. `data/synthetic_3d_irreg.py`,
+  `scripts/demo_citygml_featurise.py`. See Exp 2.2 audit + ADR 0008.
 - **GINO GPU acceleration (~6×)** — `models/gino_accel.py` + `GinoOperator.accelerate()`:
   per-sample neighbour-graph caching (the static geometry's CRS graph is computed once,
   not every forward), on-GPU `torch_cluster` radius search, RAM-cached corpus

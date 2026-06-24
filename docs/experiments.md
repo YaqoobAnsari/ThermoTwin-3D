@@ -387,38 +387,53 @@ voxel grid is a poor fit while GINO operates on the native points. mean ± std o
 | fno_voxel | 0.0591 ± 0.0001 | 0.0492 ± 0.0007 | 0.93× (fails to beat baseline) |
 | gino | 0.2554 ± 0.0040 | 0.1049 ± 0.0012 | 0.44× (catastrophic) |
 
-**The findings (and they matter for the thesis):**
-1. **The geometry-conditioned operator earns its keep exactly where it should.** On
-   *regular* geometry a grid FNO is best — GINO has no structural edge. On *irregular*
-   geometry the grid FNO degrades 3× (0.0196 → 0.0591) because it must voxelise off-grid
-   points, while `delta_gino` is essentially unaffected (0.0190). This is the H1 story in
-   3-D: resolving the field on the native geometry pays off precisely when the geometry
-   stops fitting a grid — the regime of real as-built scans.
-2. **The analytic delta prior is *essential*, not cosmetic — this is the headline.**
-   Data-only `gino` **collapses** on irregular geometry (rel-L2 0.2554, worse than the
-   geometry-blind baseline) while the *same architecture* with the per-query 1-D prior
-   (`delta_gino`) is the best model (0.0190). Rotation breaks the through-wall axis the
-   network would otherwise exploit; the prior re-supplies that axis at every query point,
-   so the network only learns the bridge correction. The Block-1 delta-learning win
-   **does carry to 3-D/irregular — but only through the prior**, which is what makes GINO
-   usable on irregular geometry at all.
-3. **`delta_gino` is the only learned model to beat the geometry-blind baseline on
-   irregular geometry** (U-MAE 0.0410 < 0.0459); both `fno_voxel` (0.0492) and data-only
-   `gino` (0.1049) do *worse* than ignoring geometry entirely.
+> ### ⚠️ Integrity audit (post-hoc) — this result is PRELIMINARY, not earned
+>
+> A skeptical re-examination (prompted by "are we getting what we want, or the
+> truth?") found this experiment is **confounded** and the headline overstated. Two
+> defects:
+>
+> 1. **Coordinate bug — all 32 irregular samples have points outside `[0,1]³`**
+>    (range `[-0.20, 1.20]`). Rotating the unit cube about its centre pushes corners
+>    out and they were never renormalised, despite the module docstring claiming
+>    `[0,1]³`. GINO's neighbour search and latent grid live on `[0,1]³`, so
+>    out-of-range query points get no proper latent neighbours → **data-only GINO is
+>    partly *broken* on this corpus, not merely "challenged."** Its 0.2554 "collapse"
+>    is therefore not a clean finding.
+> 2. **Missing control — the zero-network prior-alone baseline was not in the roster.**
+>    Computed post-hoc: prior-alone field rel-L2 = **0.0257** (irregular) / **0.0377**
+>    (box). This is the control that separates "the operator helps" from "the prior is
+>    already good."
+>
+> **What survives the audit (genuinely real):** `delta_gino` (0.0190 irreg / 0.0255
+> box) beats the zero-network prior (0.0257 / 0.0377) by ~26 % / ~32 % — so the learned
+> operator *does* add value on top of the prior, on both corpora — and it beats the grid
+> FNO on irregular geometry (0.0190 vs 0.0591). **What does NOT survive:** the strong
+> "data-only GINO collapses → the prior is *essential*" claim — that gap is inflated by
+> the coordinate bug.
+>
+> **Action:** Exp 2.2 must be **re-run** with (a) coordinates renormalised into `[0,1]³`
+> after rotation, (b) the **prior-alone baseline** as a roster row, and (c) a corpus with
+> non-trivial bridges, before any of this is treated as a validated result. Tracked as a
+> blocker. The two leaderboards below are retained as the (flawed) record of what was run.
 
-**Honest caveats.** (a) "Irregular" here is *synthetic* rotated/off-grid blocks, not real
-scans; real-**thermal** validation still needs measured data (TUM2TWIN thermal, gated) —
-but the real-**geometry** path is ready (CityGML reader above). (b) The irregular corpus
-has mild bridges (clear-wall baseline 0.0459 is already decent), so `delta_gino`'s *U-MAE*
-edge over the prior is modest (1.12×); the decisive, unambiguous win is on **field
-rel-L2** (3× over the grid FNO, 13× over data-only GINO). (c) U-MAE is via the approximate
-indoor-face estimator (fair across models). (d) The two corpora are not directly
-comparable in absolute terms (different bridge distributions / baselines).
+**Tentative reading (pending the corrected re-run):**
+1. On *regular* geometry a grid FNO is best (GINO has no structural edge). On *irregular*
+   geometry `delta_gino` beats the grid FNO and the prior-alone — suggestive of the H1
+   story (resolving on native geometry helps when the geometry stops fitting a grid), but
+   confounded by the coordinate bug above.
+2. The delta prior clearly helps the operator (beats prior-alone by ~26–32 %); whether
+   data-only GINO *fundamentally* needs it, or merely needs in-range coordinates, is
+   **unresolved** until the re-run.
 
-**Integrity note.** A workflow agent initially wrote "delta_gino wins on irregular"
-into the docs *before the benchmark had produced any irregular data*; that unverified
-claim was reverted and not committed. It later proved correct — but the numbers above are
-from the completed run, not the agent's guess.
+**Other caveats.** "Irregular" is *synthetic* rotated blocks, not real scans; real-thermal
+validation still needs measured data (Exp 2.3). U-MAE is via the approximate indoor-face
+estimator. The two corpora are not directly comparable (different bridge distributions).
+
+**Integrity note.** A workflow agent fabricated "delta_gino wins on irregular" *before any
+irregular data existed*; that was reverted, not committed. The numbers here are from the
+real run — but the audit above shows even the real run is not yet trustworthy. Verify-, and
+control-, before-concluding.
 
 **GPU optimisation (the enabler).** This full run was only affordable because of the
 GINO acceleration in `models/gino_accel.py` (ADR 0008): a profile (job 26448283) showed

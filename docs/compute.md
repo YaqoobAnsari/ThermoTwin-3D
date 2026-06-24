@@ -73,7 +73,7 @@ Most recent first. `R`=running, `C`=completed, `X`=cancelled, `TO`=timeout.
 
 | Job ID | Date | Partition | What | Config | Status | Result |
 |---|---|---|---|---|---|---|
-| 26450191 | 2026-06-24 | feit-gpu-a100 | Block-2 FULL benchmark | 300 ep, 3 seed, box + irregular | C (2:17) | **delta_gino wins on irregular** (rel-L2 0.0190 vs voxel 0.0591 vs gino 0.2554); grid FNO wins on box — Exp 2.2 |
+| 26450191 | 2026-06-24 | feit-gpu-a100 | Block-2 FULL benchmark | 300 ep, 3 seed, box + irregular | C (2:17) | delta_gino 0.0190 > voxel 0.0591 > gino 0.2554 on irregular — but **PRELIMINARY**: coord bug + missing prior-alone control (Exp 2.2 audit), re-run pending |
 | 26449117 | 2026-06-24 | feit-gpu-a100 | GINO speedup confirmation | 60 ep, accel on | C | 1.67 s/epoch, rel-L2 0.0243 — accuracy preserved |
 | 26449084 | 2026-06-24 | feit-gpu-a100 | GINO speedup (primary) | 10 ep, accel on | C | 1.70 s/epoch — ~6× vs pre-opt |
 | 26448283 | 2026-06-24 | feit-gpu-a100 | GINO profile | torch.profiler | C | FNO-GEMM-bound, not search; see GPU-optimisation note |

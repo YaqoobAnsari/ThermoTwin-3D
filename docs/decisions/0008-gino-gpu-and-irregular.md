@@ -38,16 +38,18 @@ every forward, and `np.load` was paid per step.
 
 ## Consequences
 
-- **Result (Exp 2.2, 300 ep × 3 seeds):** on regular boxes the grid FNO wins
-  (rel-L2 0.0196 vs GINO 0.0243); on **irregular** geometry **`delta_gino` wins
-  decisively** (field rel-L2 **0.0190** vs grid FNO 0.0591 vs data-only GINO 0.2554) and
-  is the **only** learned model to beat the geometry-blind baseline (U-MAE 0.0410 < 0.0459).
-- **The analytic delta prior is the enabler.** Data-only GINO *collapses* on irregular
-  geometry (0.2554) while the same architecture with the per-query 1-D prior is best
-  (0.0190). Rotation breaks the through-wall axis the network would exploit; the prior
-  re-supplies it. The Block-1 delta-learning win carries to 3-D/irregular **through the
-  prior** — adopt `delta_gino` (prior-conditioned GINO) as the Block-2 operator; keep
-  `gino`/`fno_voxel` as registered baselines.
+- **Result (Exp 2.2, 300 ep × 3 seeds) — PRELIMINARY, flagged for re-run.** On regular
+  boxes the grid FNO wins (rel-L2 0.0196 vs GINO 0.0243); on **irregular** geometry
+  `delta_gino` (0.0190) beats the grid FNO (0.0591) and the zero-network prior-alone
+  control (0.0257, ~26 %).
+- **Integrity audit (post-hoc) — the strong claim is not earned.** All irregular samples
+  have points **outside `[0,1]³`** (rotation un-renormalised — a bug), which partly
+  *breaks* data-only GINO and inflates its 0.2554 "collapse"; and the roster lacked the
+  prior-alone control. So "the prior is *essential* / data-only GINO collapses" is
+  **unresolved** (genuine difficulty vs broken-input artifact). What survives: `delta_gino`
+  beats the prior-alone by ~26–32 %. **Re-run required** (renormalise coords, add the
+  prior-alone row, non-trivial bridges) before adopting `delta_gino` as the Block-2
+  operator on the strength of this. The GPU-acceleration decision (1) stands regardless.
 - **Honest scope:** "irregular" is synthetic (rotated blocks), not real scans; the U-MAE
   edge over the prior is modest (mild bridges) — the unambiguous win is field rel-L2.
   Real-**thermal** validation (Exp 2.3) still needs measured TUM2TWIN data (gated); the
