@@ -73,7 +73,8 @@ Most recent first. `R`=running, `C`=completed, `X`=cancelled, `TO`=timeout.
 
 | Job ID | Date | Partition | What | Config | Status | Result |
 |---|---|---|---|---|---|---|
-| 26450191 | 2026-06-24 | feit-gpu-a100 | Block-2 FULL benchmark | 300 ep, 3 seed, box + irregular | C (2:17) | delta_gino 0.0190 > voxel 0.0591 > gino 0.2554 on irregular — but **PRELIMINARY**: coord bug + missing prior-alone control (Exp 2.2 audit), re-run pending |
+| 26457060 | 2026-06-24 | feit-gpu-a100 | Block-2 FULL **corrected re-run** | 300 ep, 3 seed, box + irregular, +`prior_only` control, in-range corpus | C (2:00) | **Null on the headline.** Irregular field rel-L2: fno_voxel **0.0603** < delta_gino 0.0636 < prior_only 0.0958 < gino 0.1668. delta_gino beats the prior control (−34 %) but **not** the grid FNO; the confounded "0.0190 ≪ 0.0591" gap was the coord bug. gino collapse real but ~50 % bug-inflated (0.2554→0.1668). GINO still launch-bound (AveCPU≈Elapsed on box step). See Exp 2.2 + ADR 0008. |
+| 26450191 | 2026-06-24 | feit-gpu-a100 | Block-2 FULL benchmark (confounded) | 300 ep, 3 seed, box + irregular | C (2:17) | delta_gino 0.0190 > voxel 0.0591 > gino 0.2554 on irregular — **CONFOUNDED & SUPERSEDED**: coord bug (points outside `[0,1]³`) + missing prior-alone control. Re-run is job 26457060 above. |
 | 26449117 | 2026-06-24 | feit-gpu-a100 | GINO speedup confirmation | 60 ep, accel on | C | 1.67 s/epoch, rel-L2 0.0243 — accuracy preserved |
 | 26449084 | 2026-06-24 | feit-gpu-a100 | GINO speedup (primary) | 10 ep, accel on | C | 1.70 s/epoch — ~6× vs pre-opt |
 | 26448283 | 2026-06-24 | feit-gpu-a100 | GINO profile | torch.profiler | C | FNO-GEMM-bound, not search; see GPU-optimisation note |

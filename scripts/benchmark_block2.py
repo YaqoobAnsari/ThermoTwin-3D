@@ -16,6 +16,12 @@ and tabulates the Block-2 roster on the synthetic 3-D corpus
 * ``fno_voxel`` — the regular-grid reference. A 3-D FNO over the dense voxel field,
   reconstructed once from the scattered cloud. This is the grid baseline the
   point-cloud operators must match or beat without ever seeing a grid.
+* ``prior_only`` — the zero-parameter control. Its per-point prediction *is* the
+  analytic 1-D clear-wall prior channel; no network, no training. Scored with the same
+  field rel-L2 and the same U-from-indoor-face estimator as every learned model, it is
+  the row that separates "the operator helps" from "the prior is already good" — without
+  it a low rel-L2 cannot be attributed to the operator. (Integrity control: the operator
+  only earns the geometry result if it beats this baseline.)
 
 For each model and seed (``SEEDS``) it reports the paired metrics the venue expects —
 field **relative L2** and **U-value error** (U derived from the predicted field at the
@@ -56,11 +62,13 @@ from thermotwin.models.gino import build_delta_gino, build_gino  # noqa: E402
 from thermotwin.utils.seed import seed_everything  # noqa: E402
 
 # Roster: name -> kind. The two GINO entries differ only in whether the prior is fed
-# (delta_gino) or hidden (gino); fno_voxel is the regular-grid reference.
+# (delta_gino) or hidden (gino); fno_voxel is the regular-grid reference; prior_only is
+# the zero-parameter control whose prediction is the prior channel itself.
 ROSTER: dict[str, str] = {
     "gino": "gino",
     "delta_gino": "delta_gino",
     "fno_voxel": "fno_voxel",
+    "prior_only": "prior_only",
 }
 SEEDS = [1337, 1]
 
@@ -73,14 +81,20 @@ GNO_RADIUS = 0.12
 U_FACE_BAND = 0.08
 
 
-def _build(kind: str, device: str, accel: bool = True) -> torch.nn.Module:
+def _build(kind: str, device: str, accel: bool = True) -> torch.nn.Module | None:
     """Construct a roster model. The two GINO entries share the architecture.
+
+    Returns ``None`` for the zero-parameter ``prior_only`` control (no network).
 
     ``accel`` turns on the GINO GPU-throughput accelerators (per-sample neighbour-graph
     cache + on-GPU torch_cluster radius search) — a correctness-preserving change (the
     cached / torch_cluster CRS is set-identical to the native one); see
     :mod:`thermotwin.models.gino_accel`.
     """
+    if kind == "prior_only":
+        # Zero-parameter control: no network to build. The forward is the prior channel
+        # itself, handled directly in _eval_model; nothing trains.
+        return None
     gino_accel = dict(cache_neighbours=accel, neighbour_search_backend="auto")
     if kind == "gino":
         model = build_gino(
@@ -171,7 +185,8 @@ def _trilinear_sample(field: torch.Tensor, points: torch.Tensor) -> torch.Tensor
 def _eval_model(model, kind: str, val_ds, device: str) -> dict:
     """Per-sample field rel-L2 + U-MAE on the validation corpus (scored on points)."""
     rel_l2s, u_pred, u_true, u_clear, times = [], [], [], [], []
-    model.eval()
+    if model is not None:
+        model.eval()
     loader = DataLoader(val_ds, batch_size=1, shuffle=False, collate_fn=collate_pointcloud)
     with torch.no_grad(), _accelerate(model):
         for batch in loader:
@@ -180,7 +195,11 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
             prior = batch["prior"][0].numpy()
             uc = float(batch["u_clear"][0])
             t0 = time.perf_counter()
-            if kind == "fno_voxel":
+            if kind == "prior_only":
+                # Zero-parameter control: the prediction *is* the per-point prior channel,
+                # scored on the same support with the same field rel-L2 and U estimator.
+                pred = prior.copy()
+            elif kind == "fno_voxel":
                 vx = batch["voxel_feats"].to(device)  # (1, F, G, G, G)
                 vox_pred = model(vx)[0, 0]  # (G, G, G)
                 pred = _trilinear_sample(vox_pred, batch["points"][0].to(device)).cpu().numpy()
@@ -338,8 +357,9 @@ def main() -> None:
         for seed in a.seeds:
             seed_everything(seed)
             model = _build(kind, device, accel=a.accel)
-            params = sum(q.numel() for q in model.parameters())
-            train_s = _train_one(model, kind, train_ds, a, device)
+            # prior_only is a zero-parameter control: nothing to count, nothing to train.
+            params = 0 if model is None else sum(q.numel() for q in model.parameters())
+            train_s = 0.0 if model is None else _train_one(model, kind, train_ds, a, device)
             m = _eval_model(model, kind, val_ds, device)
             m["seed"] = seed
             m["train_time_s"] = round(train_s, 1)

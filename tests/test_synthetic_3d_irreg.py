@@ -15,9 +15,12 @@ from thermotwin.data.synthetic_3d import (
     solve_block,
 )
 from thermotwin.data.synthetic_3d_irreg import (
+    INSCRIBE_SCALE,
     generate_corpus_irregular,
     halton_unit_cube,
+    random_block_irregular,
     random_rotation,
+    rotate_into_unit_cube,
     rotated_box_sdf_grid,
     sample_block_irregular,
 )
@@ -103,19 +106,22 @@ def test_bridge_raises_u_above_clear():
 
 
 def test_rotated_sdf_sign_and_off_axis():
-    """Rotated-box SDF is negative inside, positive at protruding corners — the
-    axis-aligned-grid mismatch that motivates GINO."""
+    """Rotated-box SDF is negative inside, positive outside the tilted solid — the
+    axis-aligned-grid mismatch that motivates GINO, now with the solid fully inscribed
+    in the unit cube (no part is clipped off the lattice)."""
     rng = np.random.default_rng(4)
     rot = random_rotation(rng)
     sdf = rotated_box_sdf_grid(rot, grid=20)
     assert sdf.shape == (20, 20, 20)
     assert sdf.min() < 0.0  # interior of the tilted box
-    # A rotated unit box poking out of the unit lattice leaves some grid cells OUTSIDE
-    # the solid (sdf > 0) — exactly what an axis-aligned box SDF never has.
+    # The inscribed rotated box leaves the lattice cells around it OUTSIDE the solid
+    # (sdf > 0) — the off-axis mismatch a voxel grid pays for. With the inscribe scale the
+    # *whole* solid stays inside [0,1]^3, so the positive cells are genuine empty space.
     assert sdf.max() > 0.0
-    # Identity rotation reduces to the axis-aligned box: nothing outside the cube.
+    # Even the identity rotation now inscribes a sub-cube (scaled by 1/sqrt(3)), so cells
+    # outside the sub-cube are positive — unlike the old full-cube SDF.
     sdf_id = rotated_box_sdf_grid(np.eye(3), grid=20)
-    assert sdf_id.max() <= 1e-6
+    assert sdf_id.min() < 0.0 and sdf_id.max() > 0.0
 
 
 def test_sample_shapes_and_dtypes():
@@ -144,6 +150,66 @@ def test_corpus_deterministic_and_bridges_genuine():
         assert float(ra["u_value"]) >= float(ra["u_clear"]) - 1e-4
         assert ra["feats"].shape[1] == FEATURE_DIM
         assert "rotation" in ra
+
+
+def test_rotate_into_unit_cube_stays_in_range():
+    """The shared affine inscribes any rotated body cloud in [0,1]^3 for every rotation —
+    even the body cube's eight corners (the worst case) never escape."""
+    rng = np.random.default_rng(11)
+    corners = np.array(
+        [[a, b, c] for a in (0.0, 1.0) for b in (0.0, 1.0) for c in (0.0, 1.0)], dtype=np.float64
+    )
+    for _ in range(50):
+        rot = random_rotation(rng)
+        world = rotate_into_unit_cube(corners, rot)
+        assert world.min() >= -1e-9 and world.max() <= 1.0 + 1e-9
+    # The scale is exactly the inscribing one: a corner on the rotated main diagonal lands
+    # on a face of the unit cube (extent uses the full [0,1] range, not a smaller box).
+    np.testing.assert_allclose(INSCRIBE_SCALE, 1.0 / np.sqrt(3.0))
+
+
+def test_sample_points_in_range_and_share_sdf_frame():
+    """Every stored point sits in [0,1]^3 (so GINO's neighbour search / latent grid are
+    meaningful), and the SDF grid shares that frame: the points fall in the SDF's
+    negative (inside-solid) region."""
+    s = _block(bridges=(Bridge3D(0.225, 0.325, 0.2, 0.32, 0.2, 0.32, 50.0),))
+    k, spacing = build_k_field_3d(s)
+    res = solve_block(s)
+    rng = np.random.default_rng(12)
+    grid = 24
+    smp = sample_block_irregular(s, res, spacing, n_points=2000, grid=grid, rng=rng)
+    pts = smp["points"]
+    assert pts.min() >= -1e-6 and pts.max() <= 1.0 + 1e-6
+    # Shared frame: sample the latent SDF at the stored points (nearest cell) — points are
+    # inside the solid, so the SDF there must be <= 0 for the overwhelming majority. (A few
+    # near-face points may sit in a boundary cell whose centre reads slightly positive, so
+    # we allow a small fraction rather than demanding all <= 0.)
+    sdf = smp["sdf"]
+    ijk = np.clip((pts * grid).astype(int), 0, grid - 1)
+    sdf_at_pts = sdf[ijk[:, 0], ijk[:, 1], ijk[:, 2]]
+    assert np.mean(sdf_at_pts <= 1.0 / grid) > 0.97
+
+
+def test_irregular_bridges_are_non_trivial():
+    """The irregular block generator yields a meaningful prior-alone residual: with strong,
+    wide, insulation-targeted bridges, mean|theta-prior| and prior-alone rel-L2 are well
+    above the box corpus's near-zero clear-wall level — the operator has a residual to
+    learn, and every block has at least one genuine bridge."""
+    rng = np.random.default_rng(20)
+    mabs, rel = [], []
+    for _ in range(12):
+        block = random_block_irregular(rng, cells_per_layer=3)
+        assert len(block.bridges) >= 1  # never a clear (no-bridge) block
+        k, spacing = build_k_field_3d(block)
+        res = solve_block(block)
+        smp = sample_block_irregular(block, res, spacing, n_points=2000, grid=16, rng=rng)
+        th, pr = smp["theta"].astype(np.float64), smp["prior"].astype(np.float64)
+        mabs.append(np.mean(np.abs(th - pr)))
+        rel.append(np.linalg.norm(pr - th) / (np.linalg.norm(th) + 1e-12))
+        assert res.u_value > clear_block_u(block)  # every bridge raises U (ADR-0006)
+    # Comfortably above the box corpus's ~3e-4 mean|theta-prior| clear-wall floor.
+    assert np.mean(mabs) > 2e-3
+    assert np.mean(rel) > 0.02
 
 
 def test_loads_through_pointcloud_dataset(tmp_path):

@@ -362,90 +362,167 @@ lift to Envelope, truncated-file error, directory skip-and-log, and three integr
 tests on the real LoD2 corpus). LoD3 (`.gml` files 3–80 MB) is handled by the same
 code path but not exercised in the local <30 s test budget.
 
-### Exp 2.2 — GINO on irregular geometry (full: 300 ep × 3 seeds, A100) ⭐
+### Exp 2.2 — GINO on irregular geometry (corrected re-run: 300 ep × 3 seeds, A100) ⭐
 
 ADR [`0008`](decisions/0008-gino-gpu-and-irregular.md). Artefacts:
 `results/block2_benchmark.{json,md}` (box) and `results/block2_irreg_benchmark.{json,md}`
-(irregular). Job 26450191, feit-gpu-a100, 02:17 wall. The **irregular** corpus
-(`data/processed/block2_irreg_*`, `data/synthetic_3d_irreg.py`) is the box wall-blocks
-**rotated to arbitrary 3-D orientations and sampled off-grid**, so a single axis-aligned
-voxel grid is a poor fit while GINO operates on the native points. mean ± std over 3 seeds.
+(irregular). Job **26457060**, feit-gpu-a100, 02:00 wall, COMPLETED 0:0. The **irregular**
+corpus (`data/processed/block2_irreg_*`, `data/synthetic_3d_irreg.py`) is the box
+wall-blocks **rotated to arbitrary 3-D orientations and sampled off-grid**, so a single
+axis-aligned voxel grid is a poor fit while GINO operates on the native points. Roster now
+includes the **zero-network `prior_only` control** (its prediction *is* the analytic 1-D
+clear-wall prior, scored identically) — the row that separates "the operator helps" from
+"the prior is already good." mean ± std over seeds `[1337, 1, 2]`.
 
-**Regular (box) geometry — grid FNO wins, as expected:**
+> **This supersedes the original Exp 2.2** (job 26450191), which an integrity audit found
+> confounded: (1) **all** irregular samples had points outside `[0,1]³` (rotation about the
+> cube centre pushed corners out, never renormalised), which breaks GINO's neighbour
+> search / latent grid (both on `[0,1]³`) and partly *broke* — not merely "challenged" —
+> data-only GINO; and (2) the `prior_only` control was missing. The fix
+> (`data/synthetic_3d_irreg.py`): a single shared affine
+> `world = (1/√3)·R·(body−0.5) + 0.5` inscribes the rotated block in `[0,1]³` for *any*
+> rotation (verified `pts.min ≥ 0`, `pts.max ≤ 1` for every sample); the SDF inverts the
+> *same* affine so points and latent grid share one frame; and bridges were strengthened
+> (1–4 per block, wider footprints, conductive materials only) so the FV field departs
+> non-trivially from the prior (`mean|θ−θ₁d| = 0.042`, vs the prior-only floor). The
+> headline below is **different** from the confounded run — reported honestly.
 
-| Model | Field rel-L2 ↓ | U-MAE ↓ (W/m²K) |
-|---|---|---|
-| **fno_voxel** | **0.0196 ± 0.0001** | **0.0450 ± 0.0004** |
-| gino | 0.0243 ± 0.0003 | 0.0493 ± 0.0037 |
-| delta_gino | 0.0255 ± 0.0002 | 0.0486 ± 0.0012 |
+**Regular (box) geometry — grid FNO wins; all learned models beat the prior:**
 
-**Irregular (off-grid) geometry — `delta_gino` wins decisively:**
-
-| Model | Field rel-L2 ↓ | U-MAE ↓ (W/m²K) | vs 1-D clear (0.0459) |
+| Model | Field rel-L2 ↓ | U-MAE ↓ (W/m²K) | vs prior_only |
 |---|---|---|---|
-| **delta_gino** | **0.0190 ± 0.0002** | **0.0410 ± 0.0003** | **1.12× (only model to beat it)** |
-| fno_voxel | 0.0591 ± 0.0001 | 0.0492 ± 0.0007 | 0.93× (fails to beat baseline) |
-| gino | 0.2554 ± 0.0040 | 0.1049 ± 0.0012 | 0.44× (catastrophic) |
+| **fno_voxel** | **0.0196 ± 0.0001** | **0.0450 ± 0.0004** | beats (−48 % rel-L2) |
+| gino | 0.0243 ± 0.0003 | 0.0493 ± 0.0037 | beats (−36 %) |
+| delta_gino | 0.0255 ± 0.0002 | 0.0486 ± 0.0012 | beats (−32 %) |
+| prior_only *(control)* | 0.0377 ± 0.0000 | 0.0776 ± 0.0000 | — |
 
-> ### ⚠️ Integrity audit (post-hoc) — this result is PRELIMINARY, not earned
->
-> A skeptical re-examination (prompted by "are we getting what we want, or the
-> truth?") found this experiment is **confounded** and the headline overstated. Two
-> defects:
->
-> 1. **Coordinate bug — all 32 irregular samples have points outside `[0,1]³`**
->    (range `[-0.20, 1.20]`). Rotating the unit cube about its centre pushes corners
->    out and they were never renormalised, despite the module docstring claiming
->    `[0,1]³`. GINO's neighbour search and latent grid live on `[0,1]³`, so
->    out-of-range query points get no proper latent neighbours → **data-only GINO is
->    partly *broken* on this corpus, not merely "challenged."** Its 0.2554 "collapse"
->    is therefore not a clean finding.
-> 2. **Missing control — the zero-network prior-alone baseline was not in the roster.**
->    Computed post-hoc: prior-alone field rel-L2 = **0.0257** (irregular) / **0.0377**
->    (box). This is the control that separates "the operator helps" from "the prior is
->    already good."
->
-> **What survives the audit (genuinely real):** `delta_gino` (0.0190 irreg / 0.0255
-> box) beats the zero-network prior (0.0257 / 0.0377) by ~26 % / ~32 % — so the learned
-> operator *does* add value on top of the prior, on both corpora — and it beats the grid
-> FNO on irregular geometry (0.0190 vs 0.0591). **What does NOT survive:** the strong
-> "data-only GINO collapses → the prior is *essential*" claim — that gap is inflated by
-> the coordinate bug.
->
-> **Action:** Exp 2.2 must be **re-run** with (a) coordinates renormalised into `[0,1]³`
-> after rotation, (b) the **prior-alone baseline** as a roster row, and (c) a corpus with
-> non-trivial bridges, before any of this is treated as a validated result. Tracked as a
-> blocker. The two leaderboards below are retained as the (flawed) record of what was run.
+**Irregular (off-grid) geometry — the headline does NOT survive: grid FNO ≈ delta_gino:**
 
-**Tentative reading (pending the corrected re-run):**
-1. On *regular* geometry a grid FNO is best (GINO has no structural edge). On *irregular*
-   geometry `delta_gino` beats the grid FNO and the prior-alone — suggestive of the H1
-   story (resolving on native geometry helps when the geometry stops fitting a grid), but
-   confounded by the coordinate bug above.
-2. The delta prior clearly helps the operator (beats prior-alone by ~26–32 %); whether
-   data-only GINO *fundamentally* needs it, or merely needs in-range coordinates, is
-   **unresolved** until the re-run.
+| Model | Field rel-L2 ↓ | U-MAE ↓ (W/m²K) | vs 1-D clear (0.3211) |
+|---|---|---|---|
+| **fno_voxel** | **0.0603 ± 0.0014** | **0.2918 ± 0.0027** | 1.10× |
+| delta_gino | 0.0636 ± 0.0015 | 0.2974 ± 0.0042 | 1.08× |
+| prior_only *(control)* | 0.0958 ± 0.0000 | 0.3211 ± 0.0000 | 1.00× |
+| gino | 0.1668 ± 0.0046 | 0.4798 ± 0.0429 | 0.67× |
 
-**Other caveats.** "Irregular" is *synthetic* rotated blocks, not real scans; real-thermal
-validation still needs measured data (Exp 2.3). U-MAE is via the approximate indoor-face
-estimator. The two corpora are not directly comparable (different bridge distributions).
+**Verdict (with `prior_only` front and centre — field rel-L2 is the clean metric):**
 
-**Integrity note.** A workflow agent fabricated "delta_gino wins on irregular" *before any
-irregular data existed*; that was reverted, not committed. The numbers here are from the
-real run — but the audit above shows even the real run is not yet trustworthy. Verify-, and
-control-, before-concluding.
+1. **`delta_gino` does NOT beat the grid FNO on irregular geometry — a null result for
+   the Block-2 headline.** delta_gino 0.0636 ± 0.0015 vs fno_voxel **0.0603 ± 0.0014**: the
+   grid FNO is *marginally better*, and the seed bands do not overlap (Δ ≈ 0.0033 ≈ 2σ).
+   The corrected irregular corpus removes the dramatic "delta_gino crushes FNO (0.0190 vs
+   0.0591)" gap of the confounded run entirely — that gap was an artefact of the
+   coordinate bug (out-of-range points wrecked the voxel baseline's resampling and the
+   GINO neighbour search alike, but not the prior-channel that delta_gino leaned on). On
+   *this* synthetic irregular geometry, **the rotated block is still close enough to a box
+   that a `16³` voxel grid resolves it adequately** — GINO's native-geometry encoding buys
+   no edge. So the H1 "resolve on native geometry → win where a grid fails" story is **not
+   demonstrated** here; if anything it is mildly contradicted.
+2. **`delta_gino` *does* beat the `prior_only` control on both corpora** — irregular
+   0.0636 vs 0.0958 (**−34 % field rel-L2**, 0.2974 vs 0.3211 U-MAE), box 0.0255 vs 0.0377
+   (**−32 %**). So the learned operator adds genuine value on top of the analytic prior; it
+   is the *grid baseline*, not the prior, that it fails to beat.
+3. **Data-only `gino` does still collapse on irregular geometry — but the original "0.2554
+   catastrophe" was ~50 % bug-inflation.** Corrected it is **0.1668 ± 0.0046** (vs 0.2554
+   confounded), still ~7× its box rel-L2 (0.0243) and the *only* model that fails to beat
+   even the geometry-blind 1-D baseline (0.67× on U-MAE). So the collapse *direction* is
+   real — without the prior, GINO cannot recover the field on rotated/off-lattice support
+   in this configuration — but its *magnitude* was exaggerated by the out-of-range
+   coordinates. The "the analytic prior is what makes GINO usable on irregular geometry"
+   reading survives; "data-only GINO is catastrophically broken" was partly the bug.
 
-**GPU optimisation (the enabler).** This full run was only affordable because of the
-GINO acceleration in `models/gino_accel.py` (ADR 0008): a profile (job 26448283) showed
-the cost is the latent-FNO GEMMs, not the neighbour search; caching the static per-sample
-neighbour graph + RAM-caching the corpus + the on-GPU `torch_cluster` search gave a **~6×
-wall-clock speedup (1.67 s/epoch vs ~10)** with bit-for-bit accuracy. GINO is still not
-classically GPU-bound (batch-1 launch overhead remains), but the workload is now cheap
-enough not to gate the campaign. Details in `docs/compute.md`.
+**Why U-MAE is much worse here than box (0.29 vs 0.045).** The irregular corpus was
+deliberately given *stronger* bridges (every block bridged, wider, conductive-only), so the
+clear-wall baseline U-MAE is 0.3211 (vs 0.0776 box) and the indoor-face U estimator — which
+samples a thin near-face band — is degraded further by the rotation smearing that band
+across the voxelisation. **Field rel-L2 is therefore the metric to trust** for the operator
+comparison; the U-MAE column is reported for completeness but its absolute level reflects
+the harder bridge regime, not a regression in any model.
 
-### Exp 2.3 — real-building thermal validation (planned)
+**What the fix changed, concretely.** Box numbers are essentially unchanged (the box corpus
+was never touched) — gino 0.0243, delta_gino 0.0255, fno_voxel 0.0196 match the prior run,
+which corroborates that only the *irregular* corpus was confounded. On irregular: delta_gino
+went 0.0190 → 0.0636, fno_voxel 0.0591 → 0.0603, gino 0.2554 → 0.1668. The delta_gino move
+is the decisive one: its near-zero confounded rel-L2 was the part most inflated by the bug,
+and once coordinates are in-range it lands *just above* the grid FNO rather than far below.
 
-Featurise real TUM2TWIN CityGML buildings (reader landed above;
+**Honest scope / caveats.** "Irregular" is *synthetic* rotated blocks, not real scans —
+and a `16³` grid evidently still fits them, so this corpus does **not** yet exercise the
+regime where GINO should win (genuinely non-box, multi-component as-built shells). U-MAE is
+via the approximate indoor-face estimator. The two corpora are not directly comparable
+(different bridge distributions). **Block-2's open question is therefore not yet settled in
+GINO's favour**: a future corpus must be irregular *enough that a voxel grid genuinely
+fails* (real CityGML / scan geometry) before the geometry-resolved operator can earn the H1
+headline. Recorded as a null, not a win.
+
+**Process note.** An earlier campaign had an agent fabricate "delta_gino wins on irregular"
+*before any irregular data existed*; that was reverted, not committed. This entry is from
+the completed corrected run (job 26457060) and reports the null outcome as found.
+
+**GPU optimisation (the enabler).** Even this corrected re-run was only affordable because
+of the GINO acceleration in `models/gino_accel.py` (ADR 0008): a profile (job 26448283)
+located the cost as the latent-FNO GEMMs, not the neighbour search; caching the static
+per-sample neighbour graph + RAM-caching the corpus + the on-GPU `torch_cluster` search
+gave a **~6× wall-clock speedup** with bit-for-bit accuracy. GINO remains launch-overhead
+bound at batch-1 (`AveCPU 00:58:44 ≈ Elapsed 00:59:30` on the box step — pinned to ~1
+core), but the workload is cheap enough not to gate the campaign. Details in
+`docs/compute.md`.
+
+### Exp 2.3 — real-thermal sample pipeline (TUM2TWIN street-level TIR, qualitative) ⭐
+
+A real-thermal **on-ramp**, not a quantitative validation. We ingested and characterised
+the one TUM2TWIN street-level TIR sample we hold (`data/raw/tum2twin/thermal_tir_2016/`,
+Jenoptik IR-TCM 640 microbolometer, FOV 65.2°×51.3°) and built the IO + saliency pipeline
+that calibrated thermography (TBBR) can later plug into. Code: `data/thermal_tir.py`
+(loaders, ENU→ECEF, tone-map, `heat_loss_saliency`), `scripts/analyse_thermal_sample.py`
+(figures + `results/thermal_sample/summary.json`); gated by `tests/test_thermal_tir.py`.
+
+**What was ingested.** 73 frames load cleanly as 16-bit `uint16` 480×640 **raw radiometric
+counts**. Frame ids `14460..14532` align one-to-one with the `(73, 7)` pose table
+`[frame_id, x,y,z (ENU metres), roll,pitch,yaw (deg)]`. Raw counts span 179..16259; the 179
+floor is a constant border/sentinel across all frames (not scene radiance), so a
+percentile-robust tone map is used rather than the vendor mean-subtract. The scene is a real
+Munich multi-storey facade drive-by: the readme ENU→ECEF 4×4 parses (unit-norm rotation
+columns, `[0,0,0,1]` bottom row) and its translation places the ENU origin at ≈ 11.569°E,
+48.149°N (verified ECEF→geodetic by hand) — inside the TUM2TWIN CityGML extent. Vehicle path
+≈ 20.44 m in ENU at near-constant height (z ∈ [−23.45, −23.39]).
+
+**Heat-loss saliency finding.** `heat_loss_saliency` **ANDs** a global high-percentile
+threshold (warm outliers, default 97th pct) with a *local-contrast* test (> 2 local std
+above a 25 px-window mean), so it survives vignetting/large-scale gradients and flags only
+*localised* warm anomalies. It is deliberately conservative — per-frame warm-area fraction
+is 0.05–0.15 % (mean 0.0010 over the 73 frames). Validated that it targets *warm* pixels:
+salient-pixel mean count 15 620 vs 15 105 non-salient in the mid-frame. **Honest scene
+caveat:** this is a night-time facade where the wall reads *warmer* than the (cold,
+single-glazed) windows, so saliency correctly avoids painting the whole bright wall and
+instead picks discrete hot spots — honest qualitative behaviour, **not** a calibrated
+heat-loss map (warm ≠ heat-loss without calibration and scene context).
+
+**Fusion feasibility (TIR ENU ↔ CityGML UTM32N).** *Feasible for pure geometry
+(trajectory/frame granularity), NOT for pixel→surface.* The TIR is in local ENU; the
+CityGML is EPSG:25832 (ETRS89/UTM32N). They are relatable via the chain **ENU → ECEF
+(readme 4×4) → geographic → UTM32N** — `pyproj` is absent from the env but pip-installable
+here (dry-run resolves `pyproj-3.7.1`); the geographic→UTM32N step is then one `Transformer`.
+The hard blocker for an *image*↔geometry fusion is intrinsic to the sample and unchanged:
+**no camera intrinsics, no boresight/lever-arm extrinsics, and the pose is the vehicle
+carrier not the sensor**, so pixels cannot be back-projected onto CityGML surfaces. We did
+**not** force a fusion — this is a feasibility assessment only.
+
+**Explicit limits (these travel with every number, written into
+`results/thermal_sample/summary.json` `scope.can_support` / `cannot_support`).**
+*Cannot:* (1) **no radiometric calibration** — values are uncalibrated microbolometer
+counts, no count→Kelvin / emissivity / reflected-temperature correction → **no absolute
+temperatures**; (2) **no thermal ground-truth field** → **no quantitative U-value/heat-flux
+validation**; (3) **carrier-not-sensor pose + no intrinsics/extrinsics** → **no
+pixel→surface back-projection**. Scope is therefore strictly characterisation + qualitative
+warm-region saliency. **TBBR/TBBRv2** (in hand, CC-BY-4.0, calibrated UAV thermography with
+6 927 thermal-bridge annotations) is the correct *quantitative* substrate for near-term H2
+work; this TUM2TWIN sample is the qualitative anchor. See `docs/datasets.md`.
+
+### Exp 2.4 — real-building thermal validation (planned)
+
+Featurise real TUM2TWIN CityGML buildings (reader landed in the Exp-2.1 section;
 `scripts/demo_citygml_featurise.py`) into point cloud + SDF and validate predicted vs
-**measured** thermal fields once the TUM2TWIN street-level TIR dataset access lands
-(sample characterised; full set gated). H2 (calibrated inverse twin) attaches here.
+**measured** thermal fields once calibrated, spatially-resolved envelope data is in hand —
+TBBR for thermal-bridge / heat-loss patterns now, full TUM2TWIN TIR (with intrinsics +
+radiometric calibration) when access lands. H2 (calibrated inverse twin) attaches here.

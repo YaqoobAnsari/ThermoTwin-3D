@@ -7,17 +7,39 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
-- **Block-2 Exp 2.2 — GINO on irregular geometry (PRELIMINARY; flagged for re-run).**
-  Full 300-ep × 3-seed benchmark (job 26450191): on regular boxes the grid FNO wins;
-  on irregular geometry `delta_gino` (0.0190) beats the grid FNO (0.0591) and the
-  zero-network prior-alone control (0.0257). **A post-hoc integrity audit found the
-  experiment confounded** — all irregular samples have points outside `[0,1]³` (a
-  coordinate-normalisation bug that partly *breaks* data-only GINO, inflating its 0.2554),
-  and the prior-alone baseline was missing from the roster. The "prior is essential"
-  headline is therefore **not earned**; what survives is that `delta_gino` beats the
-  prior-alone by ~26–32 %. Exp 2.2 is to be re-run with renormalised coordinates + the
-  prior-alone row + non-trivial bridges. `data/synthetic_3d_irreg.py`,
-  `scripts/demo_citygml_featurise.py`. See Exp 2.2 audit + ADR 0008.
+- **Block-2 Exp 2.2 — GINO on irregular geometry: corrected re-run, a null result on the
+  headline.** Re-ran the full 300-ep × 3-seed benchmark (job 26457060, COMPLETED 0:0) on a
+  **fixed** corpus after a post-hoc integrity audit found the original run (26450191)
+  confounded. The fix (`data/synthetic_3d_irreg.py`): a single shared inscribing affine
+  `world = (1/√3)·R·(body−0.5)+0.5` keeps every stored coordinate (points, output queries,
+  the SDF's latent grid) inside `[0,1]³` for *any* rotation — the original run had **all**
+  irregular points outside `[0,1]³`, breaking GINO's neighbour search / latent grid; a
+  zero-network `prior_only` control was added to the roster (`scripts/benchmark_block2.py`);
+  and bridges were strengthened so the field departs non-trivially from the prior.
+  **Corrected irregular field rel-L2 (mean ± std, 3 seeds):** fno_voxel **0.0603 ± 0.0014**
+  < delta_gino 0.0636 ± 0.0015 < prior_only 0.0958 < gino 0.1668 ± 0.0046. **Verdict:**
+  `delta_gino` beats the prior control (−34 %) but **does NOT beat the grid FNO** — the
+  confounded run's dramatic "delta_gino 0.0190 ≪ 0.0591" gap was an artefact of the
+  coordinate bug, not a real geometry-resolved win. Data-only `gino` does still collapse on
+  irregular geometry (0.1668, only model below the 1-D baseline), but its original "0.2554
+  catastrophe" was ~50 % bug-inflation. Box numbers unchanged (corpus untouched): fno_voxel
+  0.0196 < gino 0.0243 < delta_gino 0.0255 < prior_only 0.0377. **The synthetic rotated-block
+  corpus is not irregular enough to make a `16³` voxel grid fail, so it cannot earn the H1
+  geometry-resolved headline** — recorded as a null, with real CityGML/scan geometry as the
+  next step. See Exp 2.2 + ADR 0008.
+- **Real-thermal sample pipeline (Exp 2.3, qualitative).** Ingested and characterised the
+  TUM2TWIN street-level TIR sample (`data/thermal_tir.py` loaders + ENU→ECEF + tone-map +
+  `heat_loss_saliency`; `scripts/analyse_thermal_sample.py` → `results/thermal_sample/`;
+  gated by `tests/test_thermal_tir.py`). 73 frames of 16-bit raw microbolometer counts, a
+  real Munich facade drive-by (recovered ENU origin ≈ 11.569°E/48.149°N, inside the CityGML
+  extent). A conservative warm-anomaly saliency (global high-percentile AND local-contrast)
+  flags discrete hot spots; honest scene caveat — night-time, so the wall reads warmer than
+  the cold windows (warm ≠ heat-loss without calibration). **Explicit limits:** no
+  radiometric calibration → no absolute temperatures; no thermal GT field → no quantitative
+  U-value validation; carrier-not-sensor pose + no intrinsics/extrinsics → no pixel→surface
+  back-projection. Geometry-only fusion (ENU→ECEF→geographic→UTM32N) is feasible
+  (`pyproj` pip-installable); pixel→surface is not. TBBR/TBBRv2 (in hand, calibrated,
+  6 927 annotations) is the quantitative substrate for near-term H2. See `docs/datasets.md`.
 - **GINO GPU acceleration (~6×)** — `models/gino_accel.py` + `GinoOperator.accelerate()`:
   per-sample neighbour-graph caching (the static geometry's CRS graph is computed once,
   not every forward), on-GPU `torch_cluster` radius search, RAM-cached corpus

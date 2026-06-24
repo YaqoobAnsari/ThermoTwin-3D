@@ -1,0 +1,81 @@
+{
+  "sample": "TUM2TWIN street-level TIR (thermal_tir_2016)",
+  "sensor": "Jenoptik IR-TCM 640 uncooled microbolometer, FOV 65.2x51.3 deg",
+  "n_frames": 73,
+  "frame_shape": [
+    480,
+    640
+  ],
+  "dtype": "uint16",
+  "frame_id_range": [
+    14460,
+    14532
+  ],
+  "raw_count_range": [
+    179,
+    16259
+  ],
+  "raw_count_note": "uncalibrated microbolometer counts; the constant low value (179) is a fixed border/sentinel, not scene radiance",
+  "warm_area_fraction": {
+    "min": 0.0004654947916666667,
+    "mean": 0.0009795055650684934,
+    "max": 0.001513671875
+  },
+  "vehicle_path_length_m_enu": 20.444188821147172,
+  "vehicle_z_range_m_enu": [
+    -23.44990955,
+    -23.39177318
+  ],
+  "enu_to_ecef_4x4": [
+    [
+      -0.20053982643488838,
+      -0.7297543630473251,
+      0.6536377801403899,
+      4177139.4428222147
+    ],
+    [
+      0.9796855505790951,
+      -0.14937937302342402,
+      0.13379844880141137,
+      855052.7445900743
+    ],
+    [
+      0.0,
+      0.6671914062160278,
+      0.7448863184885857,
+      4728408.463954963
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "artefacts": {
+    "contact_sheet": "results/thermal_sample/contact_sheet.png",
+    "contact_sheet_frame_ids": [
+      14460,
+      14474,
+      14489,
+      14503,
+      14518,
+      14532
+    ],
+    "saliency_overlay": "results/thermal_sample/saliency_overlay.png",
+    "saliency_overlay_frame_id": 14496
+  },
+  "scope": {
+    "qualitative_only": true,
+    "can_support": [
+      "Qualitative within-frame warm/cold structure and relative heat-loss saliency (windows / thermal bridges run warmer than surrounding wall).",
+      "Sequence + trajectory characterisation (count statistics, vehicle path).",
+      "A real-thermal IO + saliency pipeline that TBBR/TBBRv2 calibrated thermography can later plug into for quantitative work."
+    ],
+    "cannot_support": [
+      "Absolute temperatures: values are uncalibrated 16-bit microbolometer counts; no count->Kelvin map, emissivity, or reflected-temperature correction is provided.",
+      "U-value / heat-flux validation: no thermal ground-truth field accompanies the sample.",
+      "Pixel->surface back-projection: pose is the vehicle carrier, and no camera intrinsics or boresight/lever-arm extrinsics are given."
+    ]
+  }
+}

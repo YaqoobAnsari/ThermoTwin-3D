@@ -7,8 +7,9 @@
 
 | Model | Kind | Field rel-L2 ↓ | U-value MAE ↓ (W/m²K) | U-MAPE ↓ | vs 1-D clear ↑ | Infer (ms) | Params |
 |---|---|---|---|---|---|---|---|
-| fno_voxel | fno_voxel | 0.0196 ± 0.0001 | 0.0450 ± 0.0004 | 10.5% | 1.72× | 4.04 | 2,410,689 |
-| gino | gino | 0.0243 ± 0.0003 | 0.0493 ± 0.0037 | 11.2% | 1.58× | 11.67 | 2,807,892 |
-| delta_gino | delta_gino | 0.0255 ± 0.0002 | 0.0486 ± 0.0012 | 11.5% | 1.60× | 11.40 | 2,808,181 |
+| fno_voxel | fno_voxel | 0.0196 ± 0.0001 | 0.0450 ± 0.0004 | 10.5% | 1.72× | 7.67 | 2,410,689 |
+| gino | gino | 0.0243 ± 0.0003 | 0.0493 ± 0.0037 | 11.2% | 1.58× | 10.65 | 2,807,892 |
+| delta_gino | delta_gino | 0.0255 ± 0.0002 | 0.0486 ± 0.0012 | 11.5% | 1.60× | 10.26 | 2,808,181 |
+| prior_only | prior_only | 0.0377 ± 0.0000 | 0.0776 ± 0.0000 | 18.4% | 1.00× | 0.00 | 0 |
 
 Geometry-blind 1-D clear-wall baseline U-MAE: 0.0776 W/m²K — the number any geometry-aware operator must beat (H1).

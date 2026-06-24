@@ -82,3 +82,7 @@ wandb/
 !results/block2_benchmark.md
 !results/block2_irreg_benchmark.json
 !results/block2_irreg_benchmark.md
+!results/thermal_sample/
+!results/thermal_sample/summary.json
+!results/thermal_sample/contact_sheet.png
+!results/thermal_sample/saliency_overlay.png
