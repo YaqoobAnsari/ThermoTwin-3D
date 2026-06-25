@@ -7,6 +7,19 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Block-2 Exp 2.7 — bridge-focused metric: the operator beats the prior where bridges are.**
+  New `eval/bridge_metrics.py` (wired into `benchmark_block2.py`, gated by
+  `tests/test_bridge_metrics.py`) scores the *correction* — `correction_rel_l2 = ‖pred−true‖ /
+  ‖prior−true‖` — so `prior_only` ≡ 1.0 and < 1 means the operator genuinely beats the analytic
+  prior, focused on the bridge region (`|true−prior| > τ`). **Result (300 ep × 3 seeds):** on the
+  irregular corpus **`delta_transolver` bridge corr-relL2 0.348 (−65 % vs prior), the best model**,
+  beating fno_voxel 0.456 and delta_gino 0.576; on the axis-aligned hard corpus every learned model
+  beats the prior but the **grid wins** (fno_voxel 0.335) — confirming the gridless edge is about
+  rotation/irregularity, not sub-voxel size. This resolves the Exp-2.6 puzzle (the global field
+  metric drowned the localized correction in clear wall). realcg bridge table pending. Also added
+  the publication-grade `src/thermotwin/viz/` toolkit (point clouds, SDF slices, field heatmaps,
+  prediction/error overlays) + `scripts/make_figures.py`, and `benchmark_block2.py --save-preds`.
+  See Exp 2.7 + ADR 0009.
 - **Block-2 Exp 2.6 — real CityGML geometry: the grid collapses, but the prior beats every
   operator.** First run on *real* as-built geometry (`data/real_citygml_3d.py`: 27 TUM2TWIN LoD2
   buildings → whole-building shell clouds at real orientations, per-surface FV + bridges, split by

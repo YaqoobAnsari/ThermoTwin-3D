@@ -653,3 +653,48 @@ metric** (`eval/bridge_metrics.py`): score the correction error *where bridges a
 the field*, so the operator's win-among-operators can become a win-that-matters. The long-term
 "earns its keep" story is **H2 (calibrated inverse)** — infer per-surface U / bridge severity
 from measurements, where beating a global prior is not the bar.
+
+### Exp 2.7 — bridge-focused metric: the operator DOES beat the prior where bridges are ⭐
+
+Artefacts: the `## Bridge-focused` table in `results/block2_irreg_ops_benchmark.md` and
+`results/block2_hard_benchmark.md` (realcg pending — job 26487841 still running). Metric:
+`eval/bridge_metrics.py`, wired into `benchmark_block2.py`. 300 ep × 3 seeds.
+
+Exp 2.6 left a puzzle: on a whole-building cloud the *global* field rel-L2 is dominated by the
+clear-wall majority, so the operator looked no better than the zero-parameter prior even though
+its job is the *localized* bridge correction. The fix is to score the **correction** instead of
+the field:
+
+    correction_rel_l2 = ‖θ_pred − θ_true‖ / ‖θ_prior − θ_true‖
+
+so `prior_only` ≡ **1.000** by construction and **< 1.000 means the operator genuinely beats the
+analytic prior**; the *bridge* columns restrict it to the points the bridge perturbs
+(`|θ_true − θ_prior| > τ`).
+
+**Irregular corpus (bridge region 46.6% of points):**
+
+| Model | correction rel-L2 ↓ | bridge corr-relL2 (τ=0.02) ↓ | R² ↑ |
+|---|---|---|---|
+| **delta_transolver** | **0.368 ± 0.012** | **0.348 ± 0.014** | 0.86 |
+| fno_voxel (grid) | 0.524 ± 0.019 | 0.456 ± 0.021 | 0.72 |
+| delta_gino | 0.601 ± 0.018 | 0.576 ± 0.018 | 0.63 |
+| transolver (no prior) | 0.867 ± 0.164 | 0.667 ± 0.094 | 0.20 |
+| prior_only | 1.000 | 1.000 | — |
+| gino (data-only) | 1.464 ± 0.055 | 0.867 ± 0.001 | <0 |
+
+**`delta_transolver` cuts the bridge-correction error ~65 % below the prior, and beats the grid
+and delta_gino — the best model.** This *resolves the Exp-2.6 puzzle*: the operator does earn its
+keep, **where the bridges are**; the global metric just drowned it in clear wall. `clear rel-L2`
+0.023 confirms it does not corrupt the clear-wall majority.
+
+**Hard corpus (sub-voxel fins, axis-aligned, bridge region 28.9%):** every learned model beats
+the prior (all < 1), but the **grid wins** — fno_voxel **0.335** < gino 0.391 < delta_transolver
+0.454 < delta_gino 0.546 < transolver 0.576 (bridge τ=0.02). Consistent with Exp 2.5: the
+gridless advantage is about **non-axis-alignment (rotation), not sub-voxel feature size**.
+
+**Verdict.** The two corpora together sharpen the thesis cleanly: on **irregular / rotated**
+geometry the gridless `delta_transolver` is the best operator and beats both the analytic prior
+(−65 % on bridges) and the voxel grid; on **axis-aligned** geometry a grid suffices. The bridge
+metric is the right instrument — it converts the operator's value (a localized correction) into a
+number the global field rel-L2 hides. **Pending:** the realcg (real-geometry) bridge table —
+the direct real-geometry version of "beats the prior at the bridges."
