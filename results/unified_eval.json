@@ -587,30 +587,184 @@
       }
     }
   },
-  "coverage_pending": [
+  "cross_task": [
     {
-      "dataset": "3D BAG (Amsterdam)",
-      "family": "real geometry",
-      "what": "~thousands of real LoD2.2 shells",
-      "adapter": "CityJSON\u2192corpus generator (per-surface FV) \u2192 same field-prediction metrics"
+      "dataset": "Twin Houses",
+      "family": "real measured U",
+      "validates": "per-element U vs documented (real assemblies)",
+      "metrics": {
+        "elements": [
+          {
+            "element": "West",
+            "n_layers": 6,
+            "u_computed": 0.2182,
+            "u_documented": 0.2182,
+            "abs_error": 0.0
+          },
+          {
+            "element": "East",
+            "n_layers": 6,
+            "u_computed": 0.2222,
+            "u_documented": 0.2222,
+            "abs_error": 0.0
+          },
+          {
+            "element": "South",
+            "n_layers": 6,
+            "u_computed": 0.2145,
+            "u_documented": 0.2145,
+            "abs_error": 0.0
+          },
+          {
+            "element": "North",
+            "n_layers": 6,
+            "u_computed": 0.2145,
+            "u_documented": 0.2145,
+            "abs_error": 0.0
+          },
+          {
+            "element": "Int Walls",
+            "n_layers": 3,
+            "u_computed": 1.611,
+            "u_documented": 1.611,
+            "abs_error": 0.0
+          },
+          {
+            "element": "ceiling",
+            "n_layers": 6,
+            "u_computed": 0.4101,
+            "u_documented": 0.4101,
+            "abs_error": 0.0
+          },
+          {
+            "element": "floor",
+            "n_layers": 5,
+            "u_computed": 0.2945,
+            "u_documented": 0.2945,
+            "abs_error": 0.0
+          },
+          {
+            "element": "roof",
+            "n_layers": 3,
+            "u_computed": 0.1818,
+            "u_documented": 0.216,
+            "abs_error": 0.0342
+          },
+          {
+            "element": "Front door",
+            "n_layers": 1,
+            "u_computed": 0.9434,
+            "u_documented": 0.94,
+            "abs_error": 0.0034
+          }
+        ],
+        "u_mae": 0.00418,
+        "u_max_error": 0.0342,
+        "n_elements": 9
+      }
     },
     {
       "dataset": "ThermoScenes",
-      "family": "real CALIBRATED thermal",
-      "what": "8 facades, absolute \u00b0C + COLMAP geometry",
-      "adapter": "multi-view thermal-fusion adapter \u2192 surface-\u00b0C RMSE / pattern correlation"
-    },
-    {
-      "dataset": "Twin Houses",
-      "family": "real measured U / heat flux",
-      "what": "2 houses, point sensors + drawings",
-      "adapter": "geometry-encode + XLSX adapter \u2192 per-element U-value / heat-flux error"
+      "family": "real calibrated thermal",
+      "validates": "calibrated-\u00b0C heat-loss localisation (3-D fused)",
+      "metrics": {
+        "archive": "/data/gpfs/projects/punim2769/ThermoTwin-3D/data/raw/thermoscenes/ThermoScenes_full.zip",
+        "scenes": [
+          {
+            "scene": "BI-building",
+            "n_thermal_frames": 181,
+            "temp_min_C": -0.03,
+            "temp_max_C": 19.21,
+            "frame_min_C": 4.27,
+            "frame_max_C": 12.8,
+            "anomaly_pixel_frac": 0.00029
+          },
+          {
+            "scene": "buildingA_winter",
+            "n_thermal_frames": 96,
+            "temp_min_C": -15.68,
+            "temp_max_C": 15.56,
+            "frame_min_C": -8.09,
+            "frame_max_C": 11.39,
+            "anomaly_pixel_frac": 0.00025
+          },
+          {
+            "scene": "building-sunrise",
+            "n_thermal_frames": 125,
+            "temp_min_C": -7.93,
+            "temp_max_C": 8.25,
+            "frame_min_C": -6.66,
+            "frame_max_C": 0.38,
+            "anomaly_pixel_frac": 0.00024
+          },
+          {
+            "scene": "dorm1",
+            "n_thermal_frames": 150,
+            "temp_min_C": -22.12,
+            "temp_max_C": 24.57,
+            "frame_min_C": -17.36,
+            "frame_max_C": 21.82,
+            "anomaly_pixel_frac": 1e-05
+          },
+          {
+            "scene": "dorm2",
+            "n_thermal_frames": 150,
+            "temp_min_C": -7.42,
+            "temp_max_C": 25.42,
+            "frame_min_C": -6.9,
+            "frame_max_C": 21.56,
+            "anomaly_pixel_frac": 8e-05
+          },
+          {
+            "scene": "exhibition_building",
+            "n_thermal_frames": 135,
+            "temp_min_C": -11.29,
+            "temp_max_C": 14.0,
+            "frame_min_C": -10.49,
+            "frame_max_C": 8.94,
+            "anomaly_pixel_frac": 0.00058
+          },
+          {
+            "scene": "INR-building",
+            "n_thermal_frames": 151,
+            "temp_min_C": -35.46,
+            "temp_max_C": 45.55,
+            "frame_min_C": -34.19,
+            "frame_max_C": 32.84,
+            "anomaly_pixel_frac": 0.00029
+          },
+          {
+            "scene": "MED-building",
+            "n_thermal_frames": 139,
+            "temp_min_C": -25.17,
+            "temp_max_C": 37.49,
+            "frame_min_C": -18.78,
+            "frame_max_C": 31.59,
+            "anomaly_pixel_frac": 0.00011
+          }
+        ],
+        "fused_3d": {
+          "scene": "BI-building",
+          "n_points": 1620,
+          "measured_C_min": 8.04,
+          "measured_C_max": 14.95,
+          "residual_C_std": 0.66,
+          "anomaly_point_frac": 0.0216
+        }
+      }
     },
     {
       "dataset": "TBBR",
-      "family": "real bridge localization",
-      "what": "926 UAV scenes, 6 927 annotations",
-      "adapter": "2D saliency/detection adapter \u2192 precision / recall / AP vs annotated bridges"
+      "family": "real bridge detection",
+      "validates": "heat-loss saliency vs annotated bridges",
+      "metrics": {
+        "n_scenes": 30,
+        "total_bridges": 163,
+        "precision": 0.0083,
+        "bridge_recall": 0.1033,
+        "enrichment": 0.7741,
+        "note": "physics-motivated heat-loss saliency vs annotated bridges; enrichment > 1 beats random"
+      }
     }
   ]
 }

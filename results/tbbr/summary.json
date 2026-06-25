@@ -1,0 +1,8 @@
+{
+  "n_scenes": 30,
+  "total_bridges": 163,
+  "precision": 0.0083,
+  "bridge_recall": 0.1033,
+  "enrichment": 0.7741,
+  "note": "physics-motivated heat-loss saliency vs annotated bridges; enrichment > 1 beats random"
+}

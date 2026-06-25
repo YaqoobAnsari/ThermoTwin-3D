@@ -350,3 +350,38 @@ def generate_corpus_bag(
     return _corpus_from_envelopes(
         envelopes, n_per_building, seed, grid, n_points, cells_per_layer, cells_in_plane
     )
+
+
+def generate_corpus_doe(
+    doe_dir: str,
+    n_per_building: int = 6,
+    seed: int = 1337,
+    grid: int = 16,
+    n_points: int = 4096,
+    cells_per_layer: int = 4,
+    cells_in_plane: int = 16,
+    building_start: int = 0,
+    building_end: int | None = None,
+) -> list[dict]:
+    """Corpus from the DOE Commercial Reference Buildings (EnergyPlus IDFs).
+
+    The 16 DOE buildings carry **real material/construction libraries** on idealised (box-like,
+    multi-zone) geometry — the direct-fit dataset that pairs realistic *constructions* with
+    clean geometry. Each IDF -> ``Envelope.from_idf`` -> the shared per-surface FV + assembly
+    pipeline. ``building_start`` / ``building_end`` slice the (sorted) IDF list for a disjoint
+    train/val split.
+    """
+    from pathlib import Path
+
+    from ..geometry.envelope import Envelope
+
+    idfs = sorted(Path(doe_dir).rglob("*.idf"))[building_start:building_end]
+    envelopes = []
+    for p in idfs:
+        try:
+            envelopes.append(Envelope.from_idf(p))
+        except Exception as exc:
+            print(f"  (skip {p.name}: {exc})")
+    return _corpus_from_envelopes(
+        envelopes, n_per_building, seed, grid, n_points, cells_per_layer, cells_in_plane
+    )

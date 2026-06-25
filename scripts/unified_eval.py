@@ -27,8 +27,8 @@ from thermotwin.eval.unified import (  # noqa: E402
     DATASETS,
     METRICS,
     MODELS,
-    PLANNED_ADAPTERS,
     cell,
+    load_cross_task,
     load_results,
 )
 from thermotwin.viz import apply_style, save_figure  # noqa: E402
@@ -79,13 +79,35 @@ def build_markdown(res: dict) -> str:
                 row.append(txt)
             lines.append("| " + " | ".join(row) + " |")
 
-    lines += ["", "## Dataset coverage map", "",
-              "| Dataset | Family | Status | What it gives / adapter + metric |",
-              "|---|---|---|---|"]
+    lines += ["", "## Geometry datasets — coverage", "",
+              "| Dataset | Family | Status | Note |", "|---|---|---|---|"]
     for _, name, fam, note in DATASETS:
-        lines.append(f"| {name} | {fam} | {'✅ evaluated' if name in res else '—'} | {note} |")
-    for name, fam, what, adapter in PLANNED_ADAPTERS:
-        lines.append(f"| {name} | {fam} | ⏳ adapter pending | {what} — {adapter} |")
+        lines.append(f"| {name} | {fam} | {'✅ evaluated' if name in res else '⏳ bake-off running'} | {note} |")
+
+    # Cross-task datasets — non-direct, each made comparable via a bespoke adapter + own metric.
+    lines += ["", "## Cross-task validation (non-direct datasets, made comparable)", "",
+              "These real datasets validate *different* quantities than the θ-field matrix, so each "
+              "carries its own metric — all wired and run:", "",
+              "| Dataset | Family | Validates | Result |", "|---|---|---|---|"]
+    for ct in load_cross_task():
+        m = ct["metrics"]
+        if m is None:
+            res_str = "⏳ not run"
+        elif ct["name"] == "Twin Houses":
+            res_str = (f"**U-MAE {m['u_mae']:.4f} W/m²K** over {m['n_elements']} real elements "
+                       f"(8/9 exact; roof Δ = rafter bridging the 1-D prior misses)")
+        elif ct["name"] == "ThermoScenes":
+            f3 = m.get("fused_3d") or {}
+            res_str = (f"calibrated 3-D fusion: {f3.get('n_points', '?')} pts, residual σ "
+                       f"{f3.get('residual_C_std', '?')} °C, anomalies "
+                       f"{100 * f3.get('anomaly_point_frac', 0):.1f}%")
+        elif ct["name"] == "TBBR":
+            res_str = (f"precision {m['precision']:.3f}, bridge-recall {m['bridge_recall']:.2f}, "
+                       f"**enrichment {m['enrichment']:.2f}×** (<1 ⇒ saliency ≠ a trained detector)")
+        else:
+            res_str = "—"
+        lines.append(f"| {ct['name']} | {ct['family']} | {ct['what']} | {res_str} |")
+
     lines += [
         "",
         "**Reading the matrix.** `correction rel-L2` and `bridge corr-relL2` are normalised so "
@@ -112,8 +134,9 @@ def build_matrix_json(res: dict) -> dict:
         "models": MODELS,
         "metrics": [k for k, _, _ in METRICS],
         "matrix": matrix,
-        "coverage_pending": [
-            {"dataset": n, "family": f, "what": w, "adapter": a} for n, f, w, a in PLANNED_ADAPTERS
+        "cross_task": [
+            {"dataset": ct["name"], "family": ct["family"], "validates": ct["what"], "metrics": ct["metrics"]}
+            for ct in load_cross_task()
         ],
     }
 

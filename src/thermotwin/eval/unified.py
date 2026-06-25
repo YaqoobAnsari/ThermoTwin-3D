@@ -19,7 +19,7 @@ from pathlib import Path
 
 _RESULTS = Path(__file__).resolve().parents[3] / "results"
 
-__all__ = ["DATASETS", "MODELS", "METRICS", "PLANNED_ADAPTERS", "load_results", "cell"]
+__all__ = ["DATASETS", "MODELS", "METRICS", "CROSS_TASK", "load_results", "load_cross_task", "cell"]
 
 # Geometry / field-prediction datasets we already have full results for.
 # (json stem, display name, family, note)
@@ -29,6 +29,7 @@ DATASETS = [
     ("block2_hard_benchmark", "synthetic-hard", "synthetic geometry", "sub-voxel thermal fins"),
     ("block2_realcg_benchmark", "real-CityGML", "real geometry", "TUM2TWIN LoD2 shells, sim. physics"),
     ("block2_bag_benchmark", "real-3DBAG", "real geometry", "3D BAG Amsterdam LoD2.2 shells, sim. physics"),
+    ("block2_doe_benchmark", "DOE-refbldg", "real constructions", "DOE Reference Buildings (real materials, idealised geometry)"),
 ]
 
 MODELS = ["delta_transolver", "transolver", "delta_gino", "gino", "fno_voxel", "prior_only"]
@@ -43,17 +44,30 @@ METRICS = [
     ("infer_ms_per_sample", "infer ms ↓", True),
 ]
 
-# Real-thermal / extra datasets that need a bespoke adapter (the honest coverage map). Each
-# validates a different quantity in a different format — they are NOT in this matrix yet.
-# (name, family, what it is, adapter + metric it will contribute)
-PLANNED_ADAPTERS = [
-    ("ThermoScenes", "real CALIBRATED thermal", "8 facades, absolute °C + COLMAP geometry",
-     "multi-view thermal-fusion adapter → surface-°C RMSE / pattern correlation"),
-    ("Twin Houses", "real measured U / heat flux", "2 houses, point sensors + drawings",
-     "geometry-encode + XLSX adapter → per-element U-value / heat-flux error"),
-    ("TBBR", "real bridge localization", "926 UAV scenes, 6 927 annotations",
-     "2D saliency/detection adapter → precision / recall / AP vs annotated bridges"),
+# Non-direct datasets, each made comparable via a bespoke adapter with its OWN metric (they
+# validate different quantities in different formats, so they can't share the θ-field matrix).
+# (name, family, summary.json, what it validates, metric keys to surface)
+CROSS_TASK = [
+    ("Twin Houses", "real measured U", "results/twin_houses/summary.json",
+     "per-element U vs documented (real assemblies)", ["u_mae", "u_max_error", "n_elements"]),
+    ("ThermoScenes", "real calibrated thermal", "results/thermoscenes/summary.json",
+     "calibrated-°C heat-loss localisation (3-D fused)", ["fused_3d"]),
+    ("TBBR", "real bridge detection", "results/tbbr/summary.json",
+     "heat-loss saliency vs annotated bridges", ["precision", "bridge_recall", "enrichment"]),
 ]
+
+
+def load_cross_task() -> list[dict]:
+    """Load each cross-task adapter's summary.json (skipping any not yet run)."""
+    out = []
+    for name, fam, path, what, keys in CROSS_TASK:
+        p = _RESULTS.parent / path
+        row = {"name": name, "family": fam, "what": what, "metrics": None}
+        if p.exists():
+            row["metrics"] = json.loads(p.read_text())
+            row["keys"] = keys
+        out.append(row)
+    return out
 
 
 def load_results() -> dict:

@@ -70,17 +70,25 @@ Datasets evaluated: **synthetic-box, synthetic-irregular, synthetic-hard, real-C
 | fno_voxel | 7.666 ± 6.597 | 3.087 ± 0.125 | 3.545 ± 0.747 | 3.102 ± 0.089 |
 | prior_only | **0.003 ± 0.000** | **0.003 ± 0.001** | **0.004 ± 0.001** | **0.005 ± 0.001** |
 
-## Dataset coverage map
+## Geometry datasets — coverage
 
-| Dataset | Family | Status | What it gives / adapter + metric |
+| Dataset | Family | Status | Note |
 |---|---|---|---|
 | synthetic-box | synthetic geometry | ✅ evaluated | axis-aligned box (legacy 4-model run) |
 | synthetic-irregular | synthetic geometry | ✅ evaluated | rotated / off-lattice |
 | synthetic-hard | synthetic geometry | ✅ evaluated | sub-voxel thermal fins |
 | real-CityGML | real geometry | ✅ evaluated | TUM2TWIN LoD2 shells, sim. physics |
-| 3D BAG (Amsterdam) | real geometry | ⏳ adapter pending | ~thousands of real LoD2.2 shells — CityJSON→corpus generator (per-surface FV) → same field-prediction metrics |
-| ThermoScenes | real CALIBRATED thermal | ⏳ adapter pending | 8 facades, absolute °C + COLMAP geometry — multi-view thermal-fusion adapter → surface-°C RMSE / pattern correlation |
-| Twin Houses | real measured U / heat flux | ⏳ adapter pending | 2 houses, point sensors + drawings — geometry-encode + XLSX adapter → per-element U-value / heat-flux error |
-| TBBR | real bridge localization | ⏳ adapter pending | 926 UAV scenes, 6 927 annotations — 2D saliency/detection adapter → precision / recall / AP vs annotated bridges |
+| real-3DBAG | real geometry | ⏳ bake-off running | 3D BAG Amsterdam LoD2.2 shells, sim. physics |
+| DOE-refbldg | real constructions | ⏳ bake-off running | DOE Reference Buildings (real materials, idealised geometry) |
+
+## Cross-task validation (non-direct datasets, made comparable)
+
+These real datasets validate *different* quantities than the θ-field matrix, so each carries its own metric — all wired and run:
+
+| Dataset | Family | Validates | Result |
+|---|---|---|---|
+| Twin Houses | real measured U | per-element U vs documented (real assemblies) | **U-MAE 0.0042 W/m²K** over 9 real elements (8/9 exact; roof Δ = rafter bridging the 1-D prior misses) |
+| ThermoScenes | real calibrated thermal | calibrated-°C heat-loss localisation (3-D fused) | calibrated 3-D fusion: 1620 pts, residual σ 0.66 °C, anomalies 2.2% |
+| TBBR | real bridge detection | heat-loss saliency vs annotated bridges | precision 0.008, bridge-recall 0.10, **enrichment 0.77×** (<1 ⇒ saliency ≠ a trained detector) |
 
 **Reading the matrix.** `correction rel-L2` and `bridge corr-relL2` are normalised so `prior_only ≡ 1.000`; **< 1 means the operator genuinely beats the analytic prior**. `delta_transolver` is the lead operator on irregular/real geometry; a voxel grid wins on axis-aligned geometry; data-only operators (gino/transolver) fail on real shells. Field rel-L2 / U-MAE are the absolute-accuracy columns.

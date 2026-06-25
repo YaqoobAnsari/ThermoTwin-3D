@@ -98,3 +98,9 @@ wandb/
 !results/thermoscenes/summary.json
 !results/thermal_sample/contact_sheet.png
 !results/thermal_sample/saliency_overlay.png
+!results/block2_doe_benchmark.json
+!results/block2_doe_benchmark.md
+!results/twin_houses/
+!results/twin_houses/summary.json
+!results/tbbr/
+!results/tbbr/summary.json

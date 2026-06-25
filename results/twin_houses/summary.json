@@ -1,0 +1,70 @@
+{
+  "elements": [
+    {
+      "element": "West",
+      "n_layers": 6,
+      "u_computed": 0.2182,
+      "u_documented": 0.2182,
+      "abs_error": 0.0
+    },
+    {
+      "element": "East",
+      "n_layers": 6,
+      "u_computed": 0.2222,
+      "u_documented": 0.2222,
+      "abs_error": 0.0
+    },
+    {
+      "element": "South",
+      "n_layers": 6,
+      "u_computed": 0.2145,
+      "u_documented": 0.2145,
+      "abs_error": 0.0
+    },
+    {
+      "element": "North",
+      "n_layers": 6,
+      "u_computed": 0.2145,
+      "u_documented": 0.2145,
+      "abs_error": 0.0
+    },
+    {
+      "element": "Int Walls",
+      "n_layers": 3,
+      "u_computed": 1.611,
+      "u_documented": 1.611,
+      "abs_error": 0.0
+    },
+    {
+      "element": "ceiling",
+      "n_layers": 6,
+      "u_computed": 0.4101,
+      "u_documented": 0.4101,
+      "abs_error": 0.0
+    },
+    {
+      "element": "floor",
+      "n_layers": 5,
+      "u_computed": 0.2945,
+      "u_documented": 0.2945,
+      "abs_error": 0.0
+    },
+    {
+      "element": "roof",
+      "n_layers": 3,
+      "u_computed": 0.1818,
+      "u_documented": 0.216,
+      "abs_error": 0.0342
+    },
+    {
+      "element": "Front door",
+      "n_layers": 1,
+      "u_computed": 0.9434,
+      "u_documented": 0.94,
+      "abs_error": 0.0034
+    }
+  ],
+  "u_mae": 0.00418,
+  "u_max_error": 0.0342,
+  "n_elements": 9
+}
