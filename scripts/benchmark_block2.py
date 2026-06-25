@@ -55,6 +55,7 @@ from thermotwin.data.pointcloud_dataset import (  # noqa: E402
     collate_pointcloud,
     latent_grid_coords,
 )
+from thermotwin.eval.bridge_metrics import bridge_focused_metrics  # noqa: E402
 from thermotwin.eval.building import u_from_indoor_face_cloud, u_value_report  # noqa: E402
 from thermotwin.eval.metrics import relative_l2  # noqa: E402
 from thermotwin.models.fno import build_fno  # noqa: E402
@@ -213,6 +214,7 @@ def _trilinear_sample(field: torch.Tensor, points: torch.Tensor) -> torch.Tensor
 def _eval_model(model, kind: str, val_ds, device: str) -> dict:
     """Per-sample field rel-L2 + U-MAE on the validation corpus (scored on points)."""
     rel_l2s, u_pred, u_true, u_clear, times = [], [], [], [], []
+    pred_all, true_all, prior_all = [], [], []  # concatenated for the bridge-focused metric
     if model is not None:
         model.eval()
     loader = DataLoader(val_ds, batch_size=1, shuffle=False, collate_fn=collate_pointcloud)
@@ -241,8 +243,17 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
             u_pred.append(u_from_indoor_face_cloud(pred, prior, points, uc, band=U_FACE_BAND))
             u_true.append(float(batch["u_value"][0]))
             u_clear.append(uc)
+            pred_all.append(pred)
+            true_all.append(theta_gt)
+            prior_all.append(prior)
     op = u_value_report(np.array(u_pred), np.array(u_true))
     base = u_value_report(np.array(u_clear), np.array(u_true))
+    # Bridge-focused metrics over the whole val cloud (the localized correction the global
+    # field rel-L2 washes out). correction_rel_l2 < 1 means the model beats the prior;
+    # prior_only is exactly 1.0 by construction. See eval/bridge_metrics.py.
+    bridge = bridge_focused_metrics(
+        np.concatenate(pred_all), np.concatenate(true_all), np.concatenate(prior_all)
+    )
     return {
         "field_rel_l2": float(np.mean(rel_l2s)),
         "u_mae": op["u_mae"],
@@ -250,6 +261,7 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
         "u_mae_clear_baseline": base["u_mae"],
         "u_improvement_x": (base["u_mae"] / op["u_mae"]) if op["u_mae"] else None,
         "infer_ms_per_sample": float(np.mean(times) * 1e3),
+        **{f"bridge_{k}": v for k, v in bridge.items()},
     }
 
 
@@ -288,18 +300,24 @@ def _train_one(model, kind: str, train_ds, args, device: str) -> float:
 
 
 def _aggregate(per_seed: list[dict]) -> dict:
-    """Mean ± std over seeds for each scalar metric."""
+    """Mean ± std over seeds for every numeric metric (incl. the bridge-focused keys).
+
+    Generic over keys so new metrics aggregate automatically; ``None`` and ``NaN`` are
+    dropped per-key (e.g. a bridge threshold with no points in some seeds).
+    """
+    skip = {"seed", "train_time_s"}
     keys = [
-        "field_rel_l2",
-        "u_mae",
-        "u_mape",
-        "u_mae_clear_baseline",
-        "u_improvement_x",
-        "infer_ms_per_sample",
+        k
+        for k in per_seed[0]
+        if k not in skip and isinstance(per_seed[0][k], (int, float))
     ]
     agg: dict[str, float] = {}
     for k in keys:
-        vals = [s[k] for s in per_seed if s.get(k) is not None]
+        vals = [
+            s[k]
+            for s in per_seed
+            if s.get(k) is not None and not (isinstance(s[k], float) and np.isnan(s[k]))
+        ]
         if vals:
             agg[f"{k}_mean"] = float(np.mean(vals))
             agg[f"{k}_std"] = float(np.std(vals))
@@ -417,8 +435,9 @@ def main() -> None:
             per_seed.append(m)
             print(
                 f"[{name} seed={seed}] relL2={m['field_rel_l2']:.4f} "
-                f"U-MAE={m['u_mae']:.4f} (clear {m['u_mae_clear_baseline']:.4f}) "
-                f"train={train_s:.0f}s"
+                f"corr_relL2={m['bridge_correction_rel_l2']:.3f} "
+                f"bridge_corr={m.get('bridge_bridge_corr_rel_l2_t002', float('nan')):.3f} "
+                f"(<1 beats prior) train={train_s:.0f}s"
             )
         agg = _aggregate(per_seed)
         results.append(
@@ -496,6 +515,37 @@ def _write_markdown(path: Path, report: dict) -> None:
         else "",
         "",
     ]
+
+    # --- Bridge-focused table: does the operator's correction beat the prior? --------------
+    # correction_rel_l2 = ‖pred−true‖ / ‖prior−true‖ — prior_only ≡ 1.0, so < 1 beats the
+    # prior; the bridge columns focus that on the points the bridge actually perturbs
+    # (|true−prior| > τ in θ). This is the metric the global field rel-L2 washes out.
+    bf02 = report["results"][0].get("bridge_bridge_frac_t002_mean")
+    lines += [
+        "## Bridge-focused — does the learned correction beat the prior?",
+        "",
+        "`correction rel-L2` = ‖pred−true‖ / ‖prior−true‖ — **`prior_only` ≡ 1.000 by "
+        "construction, so < 1.000 means the operator genuinely beats the analytic prior**; "
+        "the *bridge* columns restrict this to points the bridge perturbs (|true−prior| > τ "
+        "in θ). `clear rel-L2` guards that clear walls are not corrupted.",
+        ""
+        + (
+            f"Bridge region (τ=0.02) covers ~{bf02 * 100:.1f}% of points.\n"
+            if bf02 is not None
+            else ""
+        ),
+        "| Model | correction rel-L2 ↓ | bridge corr-relL2 (τ=0.02) ↓ | "
+        "bridge corr-relL2 (τ=0.05) ↓ | correction R² ↑ | clear rel-L2 ↓ |",
+        "|---|---|---|---|---|---|",
+    ]
+    for r in sorted(report["results"], key=lambda x: x.get("bridge_correction_rel_l2_mean", 1e9)):
+        lines.append(
+            f"| {r['model']} | {fmt(r, 'bridge_correction_rel_l2')} | "
+            f"{fmt(r, 'bridge_bridge_corr_rel_l2_t002')} | "
+            f"{fmt(r, 'bridge_bridge_corr_rel_l2_t005')} | "
+            f"{fmt(r, 'bridge_correction_r2')} | {fmt(r, 'bridge_clear_field_rel_l2')} |"
+        )
+    lines.append("")
     path.write_text("\n".join(lines))
 
 
