@@ -601,3 +601,55 @@ comes at **978k params vs 2.4–2.8M** for the grid/GINO models — a parameter-
 the Block-2 lead operator; keep `delta_gino` and the grid baseline as comparators. Carry the
 recipe to real CityGML geometry before any headline claim — *synthetic wins are necessary, not
 sufficient.* See ADR `0009`.
+
+### Exp 2.6 — real CityGML geometry: grid collapses, but the prior beats every operator ⭐
+
+Artefacts: `results/block2_realcg_benchmark.{json,md}`. Corpus
+`data/processed/block2_realcg_{train,val}` (`data/real_citygml_3d.py`): each of 27 TUM2TWIN
+LoD2 CityGML buildings → a **whole-building shell point cloud at real surface orientations**
+(per-surface structured FV + strong insulation-targeted bridges, mapped onto the real 3-D
+polygons, assembled and normalised into `[0,1]^3` by the slab-corner bbox, SDF from the real
+shell mesh). **Split by building** (train = 20 buildings / val = 7 unseen). Jobs 26479838→26479839,
+feit-gpu-a100, 300 ep × 3 seeds, COMPLETED. The first time the operators see *real* as-built
+geometry.
+
+| Model | Field rel-L2 ↓ | Params |
+|---|---|---|
+| **prior_only** (zero-param analytic prior) | **0.0152 ± 0.0000** | 0 |
+| delta_transolver (best learned) | 0.0183 ± 0.0014 | 978k |
+| delta_gino | 0.0254 ± 0.0021 | 2.81M |
+| transolver (no prior) | 0.2454 ± 0.0009 | 978k |
+| fno_voxel (grid baseline) | 0.4310 ± 0.0000 | 2.41M |
+| gino (data-only) | 0.8077 ± 0.0479 | 2.81M |
+
+**Two findings, reported straight:**
+
+1. **The grid collapses on real geometry — the geometry-resolved claim holds decisively.**
+   `fno_voxel` lands at **0.431**, ~24× worse than `delta_transolver` (0.0183) and far worse
+   than its synthetic numbers (0.02–0.06). A real multi-orientation shell (thin point layers at
+   many tilts) is a pathological input for a 16³ axis-aligned voxel grid. Data-only `gino`
+   collapses to 0.808. **Among learned operators `delta_transolver` is clearly best** (−28 % vs
+   delta_gino, ~24× vs the grid, ⅓ the params). Gridless + prior confirmed as the right recipe on
+   real geometry; the diagnosis ("non-axis-alignment breaks grids") is borne out on real data.
+
+2. **No learned operator beats the zero-parameter analytic prior (0.0152).** `delta_transolver`
+   (0.0183) is *slightly worse* — its learned correction adds more noise than signal. Cause: on a
+   whole-building cloud, thermal bridges are sparse (most points are clear wall), so the residual
+   the operator must learn is ~0.5 % of the field — too small to extract cleanly from 120 samples
+   without adding noise. The prior already nails the bulk. **So "geometry-resolved operator ≫
+   grid" holds on real data; "operator beats the analytic prior on the global field" does NOT —
+   yet.** (Contrast Exp 2.5 irregular, where strong single-wall bridges gave a big residual and
+   `delta_transolver` 0.0444 *did* beat `prior_only` 0.0958.)
+
+**Metric caveat.** The U-MAE column on realcg is an artefact — the real corpus stores no trusted
+bridged building-U (multi-normal geometry breaks the indoor-face estimator), so true-U is set to
+clear-U and `prior_only` reads U-MAE 0.000. **Field rel-L2 is the only trustworthy column.**
+
+**What it means / next (Exp 2.7).** The global field metric *washes out* the localized bridge
+correction the operator exists to provide. The operator's real value on real envelopes is
+(a) handling geometry the grid cannot (proven, 24×) and (b) the *localized* bridge correction —
+which a global L2 over a mostly-clear cloud cannot see. The next step is a **bridge-focused
+metric** (`eval/bridge_metrics.py`): score the correction error *where bridges actually perturb
+the field*, so the operator's win-among-operators can become a win-that-matters. The long-term
+"earns its keep" story is **H2 (calibrated inverse)** — infer per-surface U / bridge severity
+from measurements, where beating a global prior is not the bar.

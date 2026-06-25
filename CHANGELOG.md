@@ -7,6 +7,18 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Block-2 Exp 2.6 — real CityGML geometry: the grid collapses, but the prior beats every
+  operator.** First run on *real* as-built geometry (`data/real_citygml_3d.py`: 27 TUM2TWIN LoD2
+  buildings → whole-building shell clouds at real orientations, per-surface FV + bridges, split by
+  building). **Field rel-L2:** `prior_only` **0.0152** < `delta_transolver` 0.0183 < `delta_gino`
+  0.0254 < `transolver` 0.245 < `fno_voxel` **0.431** < `gino` 0.808. Two honest findings: (1) the
+  **grid collapses on real multi-orientation shells** (fno_voxel ~24× worse than delta_transolver;
+  geometry-resolved ≫ grid, diagnosis confirmed on real data), and (2) **no learned operator beats
+  the zero-parameter analytic prior on the global field** — the bridge residual is too sparse over a
+  whole-building cloud to extract without adding noise. `delta_transolver` is the best *learned*
+  operator (−28 % vs delta_gino, ⅓ params). U-MAE on realcg is an artefact (no trusted bridged
+  building-U). Motivates a **bridge-focused metric** (Exp 2.7) + `docs/data_inventory.md` (no
+  calibrated 3-D envelope thermal-field dataset exists). See Exp 2.6.
 - **Block-2 Exp 2.5 — gridless Transolver + delta prior turns the Block-2 null into a win.**
   After a six-spike research + diagnosis campaign (`docs/block2_redesign.md`) traced the Exp-2.2
   null to a *rigged* benchmark (GINO's latent grid = the voxel baseline's 16³; the "irregular"
