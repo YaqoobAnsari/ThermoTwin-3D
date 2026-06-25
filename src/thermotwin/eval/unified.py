@@ -28,6 +28,7 @@ DATASETS = [
     ("block2_irreg_ops_benchmark", "synthetic-irregular", "synthetic geometry", "rotated / off-lattice"),
     ("block2_hard_benchmark", "synthetic-hard", "synthetic geometry", "sub-voxel thermal fins"),
     ("block2_realcg_benchmark", "real-CityGML", "real geometry", "TUM2TWIN LoD2 shells, sim. physics"),
+    ("block2_bag_benchmark", "real-3DBAG", "real geometry", "3D BAG Amsterdam LoD2.2 shells, sim. physics"),
 ]
 
 MODELS = ["delta_transolver", "transolver", "delta_gino", "gino", "fno_voxel", "prior_only"]
@@ -46,8 +47,6 @@ METRICS = [
 # validates a different quantity in a different format — they are NOT in this matrix yet.
 # (name, family, what it is, adapter + metric it will contribute)
 PLANNED_ADAPTERS = [
-    ("3D BAG (Amsterdam)", "real geometry", "~thousands of real LoD2.2 shells",
-     "CityJSON→corpus generator (per-surface FV) → same field-prediction metrics"),
     ("ThermoScenes", "real CALIBRATED thermal", "8 facades, absolute °C + COLMAP geometry",
      "multi-view thermal-fusion adapter → surface-°C RMSE / pattern correlation"),
     ("Twin Houses", "real measured U / heat flux", "2 houses, point sensors + drawings",

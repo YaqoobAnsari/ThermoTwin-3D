@@ -262,31 +262,21 @@ def _building_geometry(env: Envelope, grid: int):
     return frames, norm_min, norm_scale, sdf
 
 
-def generate_corpus_realcg(
-    citygml_dir: str,
-    n_per_building: int = 5,
-    seed: int = 1337,
-    grid: int = 16,
-    n_points: int = 4096,
-    cells_per_layer: int = 4,
-    cells_in_plane: int = 16,
-    building_start: int = 0,
-    building_end: int | None = None,
+def _corpus_from_envelopes(
+    envelopes: list,
+    n_per_building: int,
+    seed: int,
+    grid: int,
+    n_points: int,
+    cells_per_layer: int,
+    cells_in_plane: int,
 ) -> list[dict]:
-    """Generate the real-CityGML corpus: ``n_per_building`` samples per building.
+    """Core loop: turn a list of real :class:`Envelope` s into corpus records.
 
-    Args:
-        citygml_dir: directory of TUM2TWIN ``.gml`` LoD2 buildings.
-        n_per_building: augmented samples per building (vary bridges + point sampling).
-        building_start / building_end: building index slice (split train vs val by
-            building so val geometry is unseen). ``None`` end = all.
-        grid: SDF latent resolution; n_points: points per building cloud.
-
-    Returns plain-dict records matching the :mod:`synthetic_3d` schema.
+    Shared by the TUM2TWIN (CityGML) and 3D BAG (CityJSON) generators — the geometry source
+    differs, the per-surface FV + assembly is identical.
     """
     rng = np.random.default_rng(seed)
-    envelopes = read_citygml_dir(citygml_dir)
-    envelopes = envelopes[building_start:building_end]
     records: list[dict] = []
     sample_id = 0
     skipped = 0
@@ -311,3 +301,52 @@ def generate_corpus_realcg(
     if skipped:
         print(f"  (skipped {skipped} buildings that could not be meshed/sampled)")
     return records
+
+
+def generate_corpus_realcg(
+    citygml_dir: str,
+    n_per_building: int = 5,
+    seed: int = 1337,
+    grid: int = 16,
+    n_points: int = 4096,
+    cells_per_layer: int = 4,
+    cells_in_plane: int = 16,
+    building_start: int = 0,
+    building_end: int | None = None,
+) -> list[dict]:
+    """Real-geometry corpus from TUM2TWIN ``.gml`` LoD2 buildings (CityGML).
+
+    ``building_start`` / ``building_end`` slice the (deterministically ordered) building list so
+    train and val are disjoint real buildings (val geometry unseen). Records match the
+    :mod:`synthetic_3d` schema.
+    """
+    envelopes = read_citygml_dir(citygml_dir)[building_start:building_end]
+    return _corpus_from_envelopes(
+        envelopes, n_per_building, seed, grid, n_points, cells_per_layer, cells_in_plane
+    )
+
+
+def generate_corpus_bag(
+    cityjson_dir: str,
+    n_per_building: int = 2,
+    seed: int = 1337,
+    grid: int = 16,
+    n_points: int = 4096,
+    cells_per_layer: int = 4,
+    cells_in_plane: int = 16,
+    building_start: int = 0,
+    building_end: int | None = None,
+) -> list[dict]:
+    """Real-geometry corpus from 3D BAG CityJSON tiles (~thousands of real LoD2.2 shells).
+
+    Same per-surface FV + assembly as :func:`generate_corpus_realcg`; geometry comes from the
+    CityJSON reader (:mod:`thermotwin.geometry.cityjson`). ``building_start`` / ``building_end``
+    slice the deterministic envelope list (one envelope per BuildingPart, across all tiles) so
+    train/val are disjoint real buildings.
+    """
+    from ..geometry.cityjson import read_cityjson_dir
+
+    envelopes = read_cityjson_dir(cityjson_dir)[building_start:building_end]
+    return _corpus_from_envelopes(
+        envelopes, n_per_building, seed, grid, n_points, cells_per_layer, cells_in_plane
+    )

@@ -341,7 +341,7 @@ def main() -> None:
     p.add_argument("--val_root", default=None)
     p.add_argument(
         "--corpus",
-        choices=["box", "irreg", "hard", "realcg"],
+        choices=["box", "irreg", "hard", "realcg", "bag"],
         default="box",
         help=(
             "Which corpus to benchmark. 'box' -> block2_train/val + results/block2_benchmark.*; "
@@ -395,6 +395,11 @@ def main() -> None:
             "data/processed/block2_realcg_train",
             "data/processed/block2_realcg_val",
             "block2_realcg_benchmark",
+        ),
+        "bag": (
+            "data/processed/block2_bag_train",
+            "data/processed/block2_bag_val",
+            "block2_bag_benchmark",
         ),
     }
     default_train, default_val, out_stem = corpus_defaults[a.corpus]

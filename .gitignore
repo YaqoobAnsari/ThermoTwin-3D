@@ -88,6 +88,8 @@ wandb/
 !results/block2_irreg_ops_benchmark.md
 !results/block2_realcg_benchmark.json
 !results/block2_realcg_benchmark.md
+!results/block2_bag_benchmark.json
+!results/block2_bag_benchmark.md
 !results/unified_eval.json
 !results/unified_eval.md
 !results/thermal_sample/
