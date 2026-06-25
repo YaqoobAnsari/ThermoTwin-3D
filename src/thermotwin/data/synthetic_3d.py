@@ -52,7 +52,9 @@ __all__ = [
     "box_sdf_grid",
     "sample_block",
     "random_block",
+    "random_block_hard",
     "generate_corpus_3d",
+    "generate_corpus_hard",
     "FEATURE_LAYOUT",
     "LOGK_MEAN",
     "LOGK_STD",
@@ -433,6 +435,117 @@ def random_block(rng: np.random.Generator) -> BlockSample:
         cells_y=int(rng.choice([16, 20, 24])),
         cells_z=int(rng.choice([16, 20, 24])),
     )
+
+
+def random_block_hard(rng: np.random.Generator, cells_per_layer: int = 6) -> BlockSample:
+    """Draw a **high-native-resolution** block with *sub-voxel* thermal fins.
+
+    This is the corpus where a regular voxel grid genuinely *fails* — the diagnosis
+    (``docs/block2_redesign.md``) showed the box / rotated-box corpora never escaped a
+    16³ grid, so a voxel-FNO matched any point operator. Here the block is solved on a
+    **fine** native FV grid (``cells_y = cells_z ∈ {48, 64, 80}``, ``cells_per_layer``
+    6 ⇒ ~18 through-wall cells), and each thermal bridge is a **thin fin of 2–4 native
+    cells** in each in-plane axis. Because the latent / voxel grid is 16³, a fin of 2–4
+    native cells out of 48–80 spans ≤ 1 voxel cell — *sub-voxel*: nearest-cell
+    voxelisation drops or smears it (measured ~24 % U-error from aliasing) while the
+    point cloud, drawn on the native grid, resolves it exactly. Fins are conductive
+    (steel/aluminium/concrete) and puncture the insulation layer (ADR 0006), so each is
+    an unambiguous thermal bridge that raises U.
+
+    Axis-aligned (no rotation): the grid-failure signal here is *resolution* (sub-voxel
+    features), isolated cleanly from irregular orientation. The indoor face stays at
+    world axis-0, so the U-from-indoor-face estimator is exact (no body-frame issue).
+    """
+    name = rng.choice(list(_BASE_WALLS))
+    layers = _BASE_WALLS[name]
+    width_y = float(rng.uniform(0.5, 1.0))
+    width_z = float(rng.uniform(0.5, 1.0))
+    t_in = float(rng.uniform(18.0, 22.0))
+    t_out = float(rng.uniform(-12.0, 8.0))
+    r_si = float(rng.choice([0.10, 0.13, 0.17]))
+    cells_y = int(rng.choice([48, 64, 80]))
+    cells_z = int(rng.choice([48, 64, 80]))
+    dy, dz = width_y / cells_y, width_z / cells_z
+
+    conductivities = np.array([layer.conductivity_w_mk for layer in layers])
+    thicknesses = np.array([layer.thickness_m for layer in layers])
+    edges = np.concatenate([[0.0], np.cumsum(thicknesses)])
+    insul_idx = int(np.argmin(conductivities))
+    x_lo, x_hi = float(edges[insul_idx]), float(edges[insul_idx + 1])
+    insul_k = float(conductivities[insul_idx])
+    # Conductive bridge materials only (drop the weak timber stud), strictly above host.
+    strong = {m: v for m, v in _BRIDGE_K.items() if v > max(insul_k, 1.0)}
+    bridge_materials = list(strong.values()) or [v for v in _BRIDGE_K.values() if v > insul_k]
+
+    n_bridges = int(rng.integers(1, 5))  # 1..4 — never a clear block
+    bridges = []
+    for _ in range(n_bridges):
+        bk = float(rng.choice(bridge_materials))
+        # Footprint in *native cells*: 3–6 cells. At cells_y≈64 and a 16³ voxel/latent
+        # grid, that is ~0.75–1.5 voxel cells — below the grid's ~2-cell Nyquist, so a
+        # voxel-FNO (and a 16³-latent GINO) under-resolve / alias the fin, while the FV
+        # solver resolves it exactly and a ~4096-point cloud samples it (~10–40 pts/fin)
+        # so a gridless operator has real signal to learn the bridge from.
+        ny_cells = int(rng.integers(3, 7))
+        nz_cells = int(rng.integers(3, 7))
+        by, bz = ny_cells * dy, nz_cells * dz
+        y0 = float(rng.uniform(0.0, max(width_y - by, 0.0)))
+        z0 = float(rng.uniform(0.0, max(width_z - bz, 0.0)))
+        bridges.append(Bridge3D(x_lo, x_hi, y0, y0 + by, z0, z0 + bz, bk))
+
+    return BlockSample(
+        layers=layers,
+        width_y_m=width_y,
+        width_z_m=width_z,
+        t_indoor=t_in,
+        t_outdoor=t_out,
+        r_si=r_si,
+        bridges=tuple(bridges),
+        cells_per_layer=cells_per_layer,
+        cells_y=cells_y,
+        cells_z=cells_z,
+    )
+
+
+def generate_corpus_hard(
+    n: int,
+    seed: int = 1337,
+    grid: int = 16,
+    n_points: int = 4096,
+    cells_per_layer: int = 6,
+) -> list[dict]:
+    """Generate ``n`` fine-native blocks with sub-voxel fins (see :func:`random_block_hard`).
+
+    Same per-sample record schema as :func:`generate_corpus_3d` (axis-aligned, no
+    rotation), but solved on a high-resolution native grid with thin sub-voxel thermal
+    bridges, and sampled at more points (default 4096) so the cloud resolves the fins a
+    16³ voxel grid cannot. This is the corpus that lets a gridless / fine-latent operator
+    out-resolve the voxel-FNO baseline.
+    """
+    rng = np.random.default_rng(seed)
+    records: list[dict] = []
+    for i in range(n):
+        block = random_block_hard(rng, cells_per_layer=cells_per_layer)
+        k, spacing = build_k_field_3d(block)
+        bc = DirichletFilm(block.t_indoor, block.t_outdoor, r_lo=block.r_si, r_hi=block.r_se)
+        res = solve_steady_conduction(k, spacing, bc)
+        sample = sample_block(block, res, spacing, n_points=n_points, grid=grid, rng=rng)
+        u_clear = clear_block_u(block)
+        records.append(
+            {
+                "id": i,
+                **sample,
+                "u_clear": np.float32(u_clear),
+                "heat_flux": np.float32(res.heat_flux),
+                "t_indoor": np.float32(block.t_indoor),
+                "t_outdoor": np.float32(block.t_outdoor),
+                "r_si": np.float32(block.r_si),
+                "r_se": np.float32(block.r_se),
+                "grid_shape": np.asarray(k.shape, dtype=np.int32),
+                "n_bridges": np.int32(len(block.bridges)),
+            }
+        )
+    return records
 
 
 def generate_corpus_3d(

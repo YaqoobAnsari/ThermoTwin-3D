@@ -24,6 +24,12 @@ from .cnn import build_cnn
 from .delta_fno import build_delta_fno
 from .fno import build_fno
 from .gino import DeltaGino, GinoOperator, build_delta_gino, build_gino
+from .transolver import (
+    DeltaTransolver,
+    TransolverOperator,
+    build_delta_transolver,
+    build_transolver,
+)
 from .ufno import build_ufno
 from .unet import build_unet
 
@@ -31,17 +37,22 @@ __all__ = [
     "build_model",
     "build_gino",
     "build_delta_gino",
+    "build_transolver",
+    "build_delta_transolver",
     "GinoOperator",
     "DeltaGino",
+    "TransolverOperator",
+    "DeltaTransolver",
     "WIRED_MODELS",
     "GEOMETRY_MODELS",
     "DEFERRED_MODELS",
 ]
 
 WIRED_MODELS = ("fno", "cnn", "unet", "delta_fno", "ufno")
-# Geometry-conditioned operators: implemented in models/gino.py, built directly via
-# build_gino / build_delta_gino (point-cloud forward, not the grid contract).
-GEOMETRY_MODELS = ("gino", "delta_gino")
+# Geometry-conditioned operators built directly via their builders (point-cloud forward,
+# not the (B,C,H,W) grid contract): gino/delta_gino (models/gino.py, latent-grid GNO+FNO)
+# and transolver/delta_transolver (models/transolver.py, gridless physics-attention).
+GEOMETRY_MODELS = ("gino", "delta_gino", "transolver", "delta_transolver")
 # Vendored under vendored/; wire when point-cloud featurisation exists (Block 2+).
 DEFERRED_MODELS = ("gnot", "transolver", "meshgraphnet", "deeponet", "pointnet2")
 
@@ -102,12 +113,18 @@ def build_model(model_cfg: Mapping) -> nn.Module:
             depth=int(model_cfg.get("depth", 2)),
         )
     if name in GEOMETRY_MODELS:
+        builder = {
+            "gino": "build_gino",
+            "delta_gino": "build_delta_gino",
+            "transolver": "build_transolver",
+            "delta_transolver": "build_delta_transolver",
+        }[name]
         raise NotImplementedError(
             f"model '{name}' is a geometry-conditioned operator with a point-cloud "
             f"forward (input_geom, x, latent_queries, sdf, output_queries) -> (B, n_out, 1); "
             f"it does not fit build_model's (B, C, H, W) grid contract. Build it directly "
-            f"with thermotwin.models.{'build_delta_gino' if name == 'delta_gino' else 'build_gino'} "
-            f"and call it from the Block-2 runner. Grid models: {WIRED_MODELS}."
+            f"with thermotwin.models.{builder} and call it from the Block-2 runner. "
+            f"Grid models: {WIRED_MODELS}."
         )
     if name in DEFERRED_MODELS:
         raise NotImplementedError(

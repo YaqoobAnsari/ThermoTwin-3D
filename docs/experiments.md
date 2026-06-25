@@ -526,3 +526,78 @@ Featurise real TUM2TWIN CityGML buildings (reader landed in the Exp-2.1 section;
 **measured** thermal fields once calibrated, spatially-resolved envelope data is in hand —
 TBBR for thermal-bridge / heat-loss patterns now, full TUM2TWIN TIR (with intrinsics +
 radiometric calibration) when access lands. H2 (calibrated inverse twin) attaches here.
+
+### Exp 2.5 — gridless operator (Transolver) + delta prior: the Block-2 null becomes a win ⭐
+
+ADR [`0009`](decisions/0009-transolver-gridless-delta.md). Artefacts:
+`results/block2_irreg_ops_benchmark.{json,md}` (irregular), `results/block2_hard_benchmark.{json,md}`
+(hard). Full design + diagnosis: [`block2_redesign.md`](block2_redesign.md). Jobs 26474381
+(irreg) / 26474379→26474380 (hard), feit-gpu-a100, 300 ep × 3 seeds, COMPLETED.
+
+A six-spike research + diagnosis campaign concluded the Exp-2.2 null was a **rigged
+benchmark**, not an operator failure: GINO's latent grid was set to the *same* 16³ resolution
+as the voxel-FNO baseline (so it had no resolution edge), the "irregular" corpus was a shrunk
+tilted box a 16³ grid resolves fine, and the irregular U-MAE was a frame-bug artefact. The fix:
+add a **gridless** operator (**Transolver**, Wu et al. ICML 2024 — physics-attention slices, no
+latent grid) and carry the proven delta-prior recipe onto it (`delta_transolver`), then
+benchmark the full roster. Two corpora: the **existing irregular** (rotated blocks, zero new
+data) and a new **hard** corpus (`generate_corpus_hard`: fine-native blocks with sub-voxel
+thermal fins, intended to make a 16³ grid alias).
+
+#### Irregular corpus (rotated blocks) — `delta_transolver` beats the grid (field rel-L2)
+
+| Model | Field rel-L2 ↓ | U-MAE ↓ † | Params |
+|---|---|---|---|
+| **delta_transolver** | **0.0444 ± 0.0009** | 0.2993 | **978k** |
+| fno_voxel (grid) | 0.0603 ± 0.0014 | 0.2918 | 2.41M |
+| delta_gino (Exp-2.2 approach) | 0.0636 ± 0.0015 | 0.2974 | 2.81M |
+| prior_only (control) | 0.0958 | 0.3211 | 0 |
+| transolver (no prior) | 0.1068 ± 0.0171 | 0.2850 | 978k |
+| gino (data-only) | 0.1668 ± 0.0046 | 0.4798 | 2.81M |
+
+**On the *same* irregular corpus where Exp 2.2 was a null** (delta_gino 0.0636 ≈ fno_voxel
+0.0603), `delta_transolver` cuts field rel-L2 **−26 % vs the grid baseline and −30 % vs
+delta_gino, with ⅓ the parameters** — and the seed bands do not overlap (Δ 0.0159 ≈ 11× the
+pooled σ). **The Block-2 geometry-resolved headline is earned here.** Mechanism: gridlessness
+avoids the voxel-grid smearing of *rotated* geometry, and the hard analytic prior supplies the
+bulk — data-only `transolver` *collapses* (0.1068, like data-only `gino`) because rotation
+destroys its positional cue, but **+prior → 0.0444**. It is the *combination* (gridless ×
+delta prior) that wins; neither alone does.
+
+† **U-MAE is NOT trustworthy on rotated geometry** (the indoor-face estimator is in world
+axis-0, the diagnosed frame bug — all irreg U-MAE ~0.29–0.30 is the band-fallback artefact).
+**Field rel-L2 is the metric the win rests on.** A body-frame U-fix is the next housekeeping item.
+
+#### Hard corpus (sub-voxel fins) — the grid wins; a deliberate, recorded null
+
+| Model | Field rel-L2 ↓ | U-MAE ↓ |
+|---|---|---|
+| fno_voxel (grid) | **0.0233 ± 0.0002** | **0.0390** |
+| gino | 0.0258 ± 0.0010 | 0.0476 |
+| delta_transolver | 0.0290 ± 0.0001 | 0.0457 |
+| delta_gino | 0.0314 ± 0.0004 | 0.0485 |
+| transolver | 0.0368 ± 0.0001 | 0.0517 |
+| prior_only | 0.0541 | 0.0976 |
+
+The hard corpus was designed to make a 16³ grid alias thin (3–6 native-cell) thermal fins so a
+point operator could out-resolve it. **It did not work as intended — the grid won.** Diagnosis:
+the fins were thin enough that uniform point sampling barely covered them (too little signal for
+the cloud operators), while the voxel baseline, being *axis-aligned* with the block, voxelised
+cleanly and captured a coarse average of each fin in its cell. So sub-voxel feature *size* did
+not break the grid. Recorded as a null.
+
+#### What the pair teaches (the sharpened claim)
+
+The two corpora flip the expected story: **it is *non-axis-alignment* (rotation), not sub-grid
+feature size, that breaks a voxel grid — and that is exactly where the gridless Transolver +
+delta prior wins.** A rotated slab forces the voxel-FNO to lattice a tilted domain (smearing the
+through-wall profile); Transolver reads the native points and pays none of it. This is a
+*stronger, more transferable* finding than the original hypothesis, and it points directly at
+**real CityGML / scan geometry** (genuinely irregular and non-axis-aligned) as the corpus where
+`delta_transolver` should win most — the real-data test (Exp 2.6, next). Also notable: the win
+comes at **978k params vs 2.4–2.8M** for the grid/GINO models — a parameter-efficiency bonus.
+
+**Decision:** adopt `delta_transolver` (gridless physics-attention + hard 1-D delta prior) as
+the Block-2 lead operator; keep `delta_gino` and the grid baseline as comparators. Carry the
+recipe to real CityGML geometry before any headline claim — *synthetic wins are necessary, not
+sufficient.* See ADR `0009`.

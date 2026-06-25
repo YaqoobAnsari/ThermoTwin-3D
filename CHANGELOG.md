@@ -7,6 +7,23 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Block-2 Exp 2.5 — gridless Transolver + delta prior turns the Block-2 null into a win.**
+  After a six-spike research + diagnosis campaign (`docs/block2_redesign.md`) traced the Exp-2.2
+  null to a *rigged* benchmark (GINO's latent grid = the voxel baseline's 16³; the "irregular"
+  corpus a shrunk tilted box; a frame-bug U metric), added a **gridless** operator —
+  `models/transolver.py` (`TransolverOperator` + `DeltaTransolver`, a self-contained vendored
+  Transolver, Wu et al. ICML 2024) — and carried the hard 1-D delta prior onto it. Roster in
+  `scripts/benchmark_block2.py` extended to {gino, delta_gino, **transolver, delta_transolver**,
+  fno_voxel, prior_only}; new `generate_corpus_hard` / `--hard` corpus; `--out_stem` override.
+  **Result (300 ep × 3 seeds):** on the *same* irregular corpus where Exp 2.2 was a null,
+  **`delta_transolver` field rel-L2 0.0444 ± 0.0009 beats fno_voxel 0.0603 (−26 %) and delta_gino
+  0.0636 (−30 %) at ⅓ the params** — the geometry-resolved headline, earned. Mechanism: gridless
+  × prior (data-only transolver collapses on rotation; +prior recovers it). The `hard`
+  sub-voxel-fin corpus was a **recorded null** (grid won) — sharpening the claim to *rotation,
+  not sub-grid feature size, breaks a voxel grid.* Field rel-L2 is the trusted metric (the
+  rotated-geometry U-MAE remains a frame artefact). Artefacts: `results/block2_irreg_ops_benchmark.*`,
+  `results/block2_hard_benchmark.*`. See Exp 2.5 + ADR 0009. **Next: real CityGML geometry —
+  synthetic wins are necessary, not sufficient.**
 - **Block-2 Exp 2.2 — GINO on irregular geometry: corrected re-run, a null result on the
   headline.** Re-ran the full 300-ep × 3-seed benchmark (job 26457060, COMPLETED 0:0) on a
   **fixed** corpus after a post-hoc integrity audit found the original run (26450191)

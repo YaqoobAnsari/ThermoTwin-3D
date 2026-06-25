@@ -41,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from thermotwin.data.synthetic_3d import (  # noqa: E402
     FEATURE_LAYOUT,
     generate_corpus_3d,
+    generate_corpus_hard,
 )
 from thermotwin.data.synthetic_3d_irreg import (  # noqa: E402
     generate_corpus_irregular,
@@ -71,16 +72,40 @@ def main() -> None:
         action="store_true",
         help="generate rotated, off-lattice geometry (the voxel-grid-is-a-poor-fit variant)",
     )
+    p.add_argument(
+        "--hard",
+        action="store_true",
+        help=(
+            "generate fine-native blocks with sub-voxel thermal fins — the corpus where a "
+            "16³ voxel grid genuinely aliases the bridge (the diagnosis-driven variant). "
+            "Axis-aligned; pair with --npts 4096 and --cells-per-layer 6."
+        ),
+    )
     a = p.parse_args()
+
+    if a.irregular and a.hard:
+        p.error("--irregular and --hard are mutually exclusive")
 
     out = PROCESSED / a.name
     out.mkdir(parents=True, exist_ok=True)
-    kind = "irregular (rotated, off-grid)" if a.irregular else "axis-aligned box"
+    kind = (
+        "irregular (rotated, off-grid)"
+        if a.irregular
+        else "hard (fine-native, sub-voxel fins)"
+        if a.hard
+        else "axis-aligned box"
+    )
     print(
         f"generating {a.n} {kind} 3-D blocks (seed {a.seed}, grid {a.grid}, npts {a.npts}) -> {out}"
     )
 
-    gen = generate_corpus_irregular if a.irregular else generate_corpus_3d
+    gen = (
+        generate_corpus_irregular
+        if a.irregular
+        else generate_corpus_hard
+        if a.hard
+        else generate_corpus_3d
+    )
     records = gen(a.n, seed=a.seed, grid=a.grid, n_points=a.npts, cells_per_layer=a.cells_per_layer)
     # The irregular corpus also persists the per-sample rotation matrix.
     arrays = (*_ARRAYS, "rotation") if a.irregular else _ARRAYS
@@ -108,9 +133,12 @@ def main() -> None:
         "generator": (
             "thermotwin.data.synthetic_3d_irreg.generate_corpus_irregular"
             if a.irregular
+            else "thermotwin.data.synthetic_3d.generate_corpus_hard"
+            if a.hard
             else "thermotwin.data.synthetic_3d.generate_corpus_3d"
         ),
         "irregular": bool(a.irregular),
+        "hard": bool(a.hard),
         "seed": a.seed,
         "n_samples": a.n,
         "grid": a.grid,

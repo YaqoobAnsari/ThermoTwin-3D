@@ -59,17 +59,29 @@ from thermotwin.eval.building import u_from_indoor_face_cloud, u_value_report  #
 from thermotwin.eval.metrics import relative_l2  # noqa: E402
 from thermotwin.models.fno import build_fno  # noqa: E402
 from thermotwin.models.gino import build_delta_gino, build_gino  # noqa: E402
+from thermotwin.models.transolver import build_delta_transolver, build_transolver  # noqa: E402
 from thermotwin.utils.seed import seed_everything  # noqa: E402
 
-# Roster: name -> kind. The two GINO entries differ only in whether the prior is fed
-# (delta_gino) or hidden (gino); fno_voxel is the regular-grid reference; prior_only is
-# the zero-parameter control whose prediction is the prior channel itself.
+# Roster: name -> kind. The GINO / Transolver pairs differ only in whether the analytic
+# 1-D prior is fed + added back (delta_*) or hidden (data-only); fno_voxel is the
+# regular-grid reference; prior_only is the zero-parameter control whose prediction is the
+# prior channel itself. Transolver (gridless physics-attention) is the diagnosis-driven
+# contender added to break the equal-grid null — it predicts at the native points with no
+# latent grid, so on the sub-voxel-fin `hard` corpus it can resolve features the 16³ voxel
+# grid (and a 16³-latent GINO) alias. Data-only kinds drop the prior channel; delta kinds
+# feed it and add it back.
 ROSTER: dict[str, str] = {
     "gino": "gino",
     "delta_gino": "delta_gino",
+    "transolver": "transolver",
+    "delta_transolver": "delta_transolver",
     "fno_voxel": "fno_voxel",
     "prior_only": "prior_only",
 }
+# Data-only point-cloud kinds (prior channel dropped from the features they see).
+_DATA_ONLY_CLOUD = ("gino", "transolver")
+# Delta point-cloud kinds (full features incl. theta1d + the prior added back per query).
+_DELTA_CLOUD = ("delta_gino", "delta_transolver")
 SEEDS = [1337, 1]
 
 # Latent / voxel grid resolution (the SDF is stored at G=16); FNO modes stay < G//2.
@@ -120,6 +132,17 @@ def _build(kind: str, device: str, accel: bool = True) -> torch.nn.Module | None
             latent_grid=LATENT_GRID,
             **gino_accel,
         )
+    elif kind == "transolver":
+        # Gridless physics-attention; data-only (3-ch, prior dropped). No latent grid, so
+        # it resolves sub-voxel fins the 16³ voxel / 16³-latent GINO both alias.
+        model = build_transolver(
+            in_channels=3, n_hidden=128, n_layers=8, n_head=8, slice_num=64, mlp_ratio=2
+        )
+    elif kind == "delta_transolver":
+        # Same, but predicts the correction on the analytic 1-D prior (4-ch in, prior added).
+        model = build_delta_transolver(
+            in_channels=4, n_hidden=128, n_layers=8, n_head=8, slice_num=64, mlp_ratio=2
+        )
     elif kind == "fno_voxel":
         model = build_fno(
             in_channels=4,  # voxelised [logk_std, r_si, r_se, theta1d]
@@ -151,15 +174,20 @@ def _set_sample_key(model, batch: dict) -> None:
 
 
 def _forward_cloud(model, kind: str, batch: dict, device: str) -> torch.Tensor:
-    """One forward of a point-cloud (GINO) model -> ``(B, n_out, 1)``."""
+    """One forward of a point-cloud model (GINO or Transolver) -> ``(B, n_out, 1)``.
+
+    Both families share the ``(input_geom, feats, latent_queries, sdf, output_queries)``
+    signature (Transolver ignores the latent grid / SDF / queries); the delta variants
+    take an extra per-query ``prior``. Data-only kinds see the prior-dropped features.
+    """
     input_geom = batch["input_geom"].to(device)
     sdf = batch["sdf"].to(device)
     latent_queries = batch["latent_queries"].to(device)
     output_queries = batch["output_queries"].to(device)
-    if kind == "gino":
-        feats = batch["gino_feats"].to(device)
+    if kind in _DATA_ONLY_CLOUD:
+        feats = batch["gino_feats"].to(device)  # prior channel dropped
         return model(input_geom, feats, latent_queries, sdf, output_queries)
-    feats = batch["feats"].to(device)  # delta_gino: full 4-ch incl prior
+    feats = batch["feats"].to(device)  # delta_*: full 4-ch incl theta1d
     prior = batch["prior"].to(device)
     return model(input_geom, feats, latent_queries, sdf, output_queries, prior)
 
@@ -292,15 +320,26 @@ def main() -> None:
     p.add_argument("--val_root", default=None)
     p.add_argument(
         "--corpus",
-        choices=["box", "irreg"],
+        choices=["box", "irreg", "hard"],
         default="box",
         help=(
             "Which corpus to benchmark. 'box' -> block2_train/val + results/block2_benchmark.*; "
-            "'irreg' -> block2_irreg_train/val + results/block2_irreg_benchmark.*. "
+            "'irreg' -> block2_irreg_train/val + results/block2_irreg_benchmark.*; "
+            "'hard' -> block2_hard_train/val + results/block2_hard_benchmark.* (the fine-native "
+            "sub-voxel-fin corpus where a 16³ voxel grid genuinely aliases the bridge). "
             "Sets train_root/val_root and output stem unless they are overridden explicitly."
         ),
     )
     p.add_argument("--num_workers", type=int, default=0)
+    p.add_argument(
+        "--out_stem",
+        default=None,
+        help=(
+            "Override the results file stem (results/<stem>.{json,md}). Defaults to the "
+            "corpus stem; set it to avoid clobbering committed artefacts when re-running an "
+            "existing corpus with a different roster (e.g. block2_irreg_ops_benchmark)."
+        ),
+    )
     p.add_argument(
         "--no-accel",
         dest="accel",
@@ -319,12 +358,19 @@ def main() -> None:
             "data/processed/block2_irreg_val",
             "block2_irreg_benchmark",
         ),
+        "hard": (
+            "data/processed/block2_hard_train",
+            "data/processed/block2_hard_val",
+            "block2_hard_benchmark",
+        ),
     }
     default_train, default_val, out_stem = corpus_defaults[a.corpus]
     if a.train_root is None:
         a.train_root = default_train
     if a.val_root is None:
         a.val_root = default_val
+    if a.out_stem:  # avoid clobbering committed artefacts when re-running with a new roster
+        out_stem = a.out_stem
 
     device = a.device if (a.device == "cpu" or torch.cuda.is_available()) else "cpu"
     train_root, val_root = _REPO / a.train_root, _REPO / a.val_root
