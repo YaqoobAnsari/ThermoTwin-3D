@@ -24,7 +24,9 @@ sys.path.insert(0, str(_REPO / "src"))
 
 from thermotwin.data.thermoscenes import (  # noqa: E402
     BUILDING_SCENES,
+    baseline_residual,
     decode_celsius,
+    fuse_thermal_to_geometry,
     heat_loss_anomaly,
     open_archive,
     temperature_bounds,
@@ -32,6 +34,7 @@ from thermotwin.data.thermoscenes import (  # noqa: E402
 )
 from thermotwin.viz import apply_style, save_figure  # noqa: E402
 from thermotwin.viz import style as vstyle  # noqa: E402
+from thermotwin.viz.pointcloud import scatter_3d  # noqa: E402
 
 ARCHIVE = _REPO / "data" / "raw" / "thermoscenes" / "ThermoScenes_full.zip"
 
@@ -57,10 +60,30 @@ def _figure(scene: str, celsius: np.ndarray, mask: np.ndarray):
     return fig
 
 
+def _figure3d(scene, xyz, celsius, baseline, residual, mask):
+    """3-D fused facade: measured °C · clear-wall baseline · residual · localized anomalies."""
+    import matplotlib.pyplot as plt
+
+    rmax = float(np.abs(residual).max()) or 1e-6
+    panels = [
+        (celsius, vstyle.THERMAL, None, None, "°C", "measured surface temperature"),
+        (baseline, vstyle.THERMAL, float(celsius.min()), float(celsius.max()), "°C", "clear-wall baseline (k-NN smooth)"),
+        (residual, vstyle.DIVERGING, -rmax, rmax, "°C", "residual (measured − baseline)"),
+        (mask.astype(float), "Reds", 0.0, 1.0, "", f"heat-loss anomalies ({100 * mask.mean():.1f}%)"),
+    ]
+    fig = plt.figure(figsize=(10.4, 8.4))
+    for i, (vals, cmap, vmn, vmx, clab, title) in enumerate(panels):
+        ax = fig.add_subplot(2, 2, i + 1, projection="3d")
+        scatter_3d(ax, np.asarray(xyz), vals, cmap=cmap, vmin=vmn, vmax=vmx, title=title, cbar_label=clab, s=5)
+    fig.suptitle(f"ThermoScenes {scene} — calibrated thermal fused onto 3-D facade ({len(xyz)} pts)", fontsize=11)
+    return fig
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--archive", default=str(ARCHIVE))
-    p.add_argument("--figures", type=int, default=3, help="how many scenes to render figures for")
+    p.add_argument("--figures", type=int, default=3, help="how many scenes to render 2-D figures for")
+    p.add_argument("--fuse-scene", default="BI-building", help="scene to fuse onto 3-D geometry")
     a = p.parse_args()
     apply_style()
     out = _REPO / "results" / "thermoscenes"
@@ -89,7 +112,27 @@ def main() -> None:
         if n_fig < a.figures:
             save_figure(_figure(scene, celsius, mask), out / f"{scene}_thermal")
             n_fig += 1
-    (out / "summary.json").write_text(json.dumps({"archive": a.archive, "scenes": summary}, indent=2))
+
+    # 3-D fusion: calibrated thermal onto the COLMAP facade + the operator/prior-baseline residual.
+    fused_info = None
+    try:
+        xyz, cel = fuse_thermal_to_geometry(zf, a.fuse_scene)
+        base, resid, mask = baseline_residual(xyz, cel)
+        save_figure(_figure3d(a.fuse_scene, xyz, cel, base, resid, mask), out / f"{a.fuse_scene}_fused3d")
+        fused_info = {
+            "scene": a.fuse_scene, "n_points": int(len(xyz)),
+            "measured_C_min": round(float(cel.min()), 2), "measured_C_max": round(float(cel.max()), 2),
+            "residual_C_std": round(float(resid.std()), 3),
+            "anomaly_point_frac": round(float(mask.mean()), 4),
+        }
+        print(f"3-D fused {a.fuse_scene}: {len(xyz)} pts, residual σ={resid.std():.2f}°C, "
+              f"anomalies {100 * mask.mean():.1f}%")
+    except Exception as exc:
+        print(f"3-D fusion skipped for {a.fuse_scene}: {exc}")
+
+    (out / "summary.json").write_text(
+        json.dumps({"archive": a.archive, "scenes": summary, "fused_3d": fused_info}, indent=2)
+    )
     print(f"wrote {len(summary)} scene summaries + {n_fig} figures to {out}/")
     for s in summary:
         print(f"  {s['scene']:20s} {s['n_thermal_frames']:3d} frames  "
