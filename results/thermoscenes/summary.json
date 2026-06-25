@@ -1,0 +1,77 @@
+{
+  "archive": "/data/gpfs/projects/punim2769/ThermoTwin-3D/data/raw/thermoscenes/ThermoScenes_full.zip",
+  "scenes": [
+    {
+      "scene": "BI-building",
+      "n_thermal_frames": 181,
+      "temp_min_C": -0.03,
+      "temp_max_C": 19.21,
+      "frame_min_C": 4.27,
+      "frame_max_C": 12.8,
+      "anomaly_pixel_frac": 0.00029
+    },
+    {
+      "scene": "buildingA_winter",
+      "n_thermal_frames": 96,
+      "temp_min_C": -15.68,
+      "temp_max_C": 15.56,
+      "frame_min_C": -8.09,
+      "frame_max_C": 11.39,
+      "anomaly_pixel_frac": 0.00025
+    },
+    {
+      "scene": "building-sunrise",
+      "n_thermal_frames": 125,
+      "temp_min_C": -7.93,
+      "temp_max_C": 8.25,
+      "frame_min_C": -6.66,
+      "frame_max_C": 0.38,
+      "anomaly_pixel_frac": 0.00024
+    },
+    {
+      "scene": "dorm1",
+      "n_thermal_frames": 150,
+      "temp_min_C": -22.12,
+      "temp_max_C": 24.57,
+      "frame_min_C": -17.36,
+      "frame_max_C": 21.82,
+      "anomaly_pixel_frac": 1e-05
+    },
+    {
+      "scene": "dorm2",
+      "n_thermal_frames": 150,
+      "temp_min_C": -7.42,
+      "temp_max_C": 25.42,
+      "frame_min_C": -6.9,
+      "frame_max_C": 21.56,
+      "anomaly_pixel_frac": 8e-05
+    },
+    {
+      "scene": "exhibition_building",
+      "n_thermal_frames": 135,
+      "temp_min_C": -11.29,
+      "temp_max_C": 14.0,
+      "frame_min_C": -10.49,
+      "frame_max_C": 8.94,
+      "anomaly_pixel_frac": 0.00058
+    },
+    {
+      "scene": "INR-building",
+      "n_thermal_frames": 151,
+      "temp_min_C": -35.46,
+      "temp_max_C": 45.55,
+      "frame_min_C": -34.19,
+      "frame_max_C": 32.84,
+      "anomaly_pixel_frac": 0.00029
+    },
+    {
+      "scene": "MED-building",
+      "n_thermal_frames": 139,
+      "temp_min_C": -25.17,
+      "temp_max_C": 37.49,
+      "frame_min_C": -18.78,
+      "frame_max_C": 31.59,
+      "anomaly_pixel_frac": 0.00011
+    }
+  ]
+}

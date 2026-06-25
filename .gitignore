@@ -94,5 +94,7 @@ wandb/
 !results/unified_eval.md
 !results/thermal_sample/
 !results/thermal_sample/summary.json
+!results/thermoscenes/
+!results/thermoscenes/summary.json
 !results/thermal_sample/contact_sheet.png
 !results/thermal_sample/saliency_overlay.png
