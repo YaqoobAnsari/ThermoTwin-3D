@@ -2,11 +2,18 @@
 
 > Snapshot 2026-06-25. Our use case needs three data roles: **real geometry** (as-built
 > envelope shape), **real thermal** (measured heat / temperature to validate + calibrate
-> against), and **physics ground truth** (the exact temperature field — which we generate,
-> because no public one exists on real geometry). The hard truth up front: a *calibrated,
-> spatially-resolved 3-D envelope thermal-FIELD dataset paired with geometry does **not**
-> exist publicly* — that absence is itself a motivation for the contribution, and it shapes
-> what "real validation" can mean (see §4).
+> against), and **physics ground truth** (the exact temperature field — which we generate).
+> **Correction (2026-06-25, after an adversarial falsification spike):** an earlier draft of
+> this doc claimed *no* public calibrated 3-D envelope thermal-field dataset paired with
+> geometry exists. **That was overstated.** Calibrated, dense thermal paired with real-building
+> 3-D geometry *does* exist at facade / small scale — **ThermoScenes/ThermoNeRF** (absolute °C
+> FLIR, 8 real facades, multi-view + COLMAP geometry; Thermoxels bakes it to FEA meshes) and
+> **TSDN/ThermalGS** (radiometric °C aerial over 5 buildings + photogrammetric mesh). So
+> real-thermal validation is **feasible now** (we hold ThermoScenes). The *narrower* gap that
+> genuinely survives: no public dataset pairs a calibrated, spatially-dense thermal field over a
+> **whole real building exterior envelope** with as-built 3-D geometry **and** physics-grade
+> material-layer / U-value / boundary-condition ground truth. That gap (scale + paired physics
+> GT), not the absence of any real calibrated thermal, is the contribution. See §4.
 
 ## 1. What we HAVE on disk (usable now)
 
@@ -35,23 +42,31 @@ synthetic layout.
 | 4 | **Building3D** (real ALS envelope geometry ↔ mesh GT) | Real as-built geometry at scale → harder real-geometry corpus beyond 27 CityGML buildings | Registration (gated) | Med |
 | 5 | **Self-captured radiometric IR campaign** on 1–3 buildings (ISO 9869 heat-flux-meter reference, logged ε / reflected-T / steady-state, paired RGB + scan) | The **only** way to get a real, *quantitative* U-value ground truth on real geometry — there is no public substitute | Own field capture | High (logistics) |
 
-## 4. The honest "real validation" ladder (given the data)
+## 4. The "real validation" ladder (given the data)
 
-Because no calibrated 3-D envelope thermal-FIELD dataset exists, "real" must be staged:
+Real validation is staged from strongest-physics to strongest-realism — and, contrary to the
+earlier draft, **calibrated real-thermal validation is available now (rung 2)**:
 
 1. **Real geometry + physics-exact GT (runnable now).** Per-surface FV conduction on the 27 real
    TUM2TWIN CityGML envelopes → the operator bake-off on genuinely irregular real shells
-   (**Exp 2.6**, in progress). Real geometry, simulated-but-exact physics. *This is the strongest
-   real test we can run as supervised field prediction today.*
-2. **Real thermal anomaly localisation (TBBR).** Score predicted high-flux/thermal-bridge regions
-   against TBBR's annotated bridges (detection metrics). Real, calibrated-enough-for-location,
-   wrong-task-for-U-value. Honest auxiliary.
-3. **Qualitative pattern agreement (TUM2TWIN TIR).** Predicted vs measured surface-temperature
-   *patterns* (rank/structural correlation) on real geometry — never absolute.
-4. **Quantitative real U-value (needs #5 above).** A small self-captured ISO-9869 case study — the
-   only route to a real, defensible U-value error number.
+   (**Exp 2.6**). Real geometry, simulated-but-exact physics.
+2. **Calibrated real-thermal field on real geometry (FEASIBLE NOW — we hold ThermoScenes).**
+   Feed a real facade's geometry + (assumed/defaulted) materials → predict the surface-temperature
+   field → compare against the **measured absolute °C** of ThermoScenes (8 EPFL facades, FLIR raw,
+   ±3 °C, COLMAP geometry; Thermoxels gives the FEA mesh). **TSDN/ThermalGS** adds an aerial,
+   5-building case (radiometric °C + photogrammetric mesh, non-commercial). This is the genuine
+   "measured reality" check — validates the predicted *thermal field*, though not U directly
+   (no measured U / material layers in these sets).
+3. **Real thermal anomaly localisation (TBBR).** Predicted high-flux regions vs annotated bridges
+   (detection metrics). Real, uncalibrated, wrong-task-for-U-value. Honest auxiliary.
+4. **Point-calibrated U / heat flux (Twin Houses).** Measured U-values + ψ-bridges + point heat
+   flux on two real houses → validates the U-value/heat-flux *readout* (sparse, not a field).
+5. **Qualitative pattern agreement (TUM2TWIN TIR)** and, if needed, a self-captured ISO-9869
+   case study for a whole-envelope quantitative U-value.
 
-**Bottom line:** we have what we need for a *real-geometry* operator result (CityGML) and a
-*real-thermal localisation* result (TBBR) **now**; a real *quantitative thermal-field/U-value*
-result requires either gated TUM2TWIN calibration (#3) or our own capture (#5). The missing
-calibrated dataset is a citable gap, not a blocker — see `docs/datasets.md` for the narrative.
+**Bottom line:** we can validate (1) the operator on real geometry, (2) the **thermal field
+against calibrated real measurements** (ThermoScenes/TSDN), (3) bridge localisation (TBBR), and
+(4) the U-value readout against point-calibrated reference (Twin Houses) — **all without gated
+data.** What no public dataset offers is a calibrated dense thermal field over a *whole* real
+envelope *with* paired material/U/boundary ground truth at scale — a contribution gap, not a
+validation blocker.

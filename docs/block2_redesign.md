@@ -68,11 +68,18 @@ earn a real result we change the regime, the roster, and the metric.
   coords, enabling an exact 3-D autograd conduction residual on the point cloud — the
   principled way to add 3-D physics. Secondary to fixing the corpus + operator; queued as a
   follow-up variation.
-- **Real thermal reality:** no public calibrated 3-D envelope thermal-FIELD dataset exists
-  (TBBR is uncalibrated, ε=1.0, detection-only; TUM2TWIN TIR is uncalibrated intensity with
-  carrier-only pose). The credible real story is **physics-exact validation on synthetic +
-  real-geometry**, with TBBR as a thermal-bridge *localisation* auxiliary and TUM2TWIN TIR as
-  a qualitative pattern check — never absolute-temperature/U regression on either.
+- **Real thermal reality (corrected 2026-06-25 after an adversarial falsification spike):**
+  calibrated, dense thermal paired with real-building 3-D geometry **does exist** at facade /
+  small scale — **ThermoScenes** (absolute °C FLIR, 8 real facades + COLMAP geometry; Thermoxels
+  → FEA meshes; in hand) and **TSDN/ThermalGS** (radiometric °C aerial over 5 buildings +
+  photogrammetric mesh). So calibrated real-thermal validation is **feasible now**, not blocked.
+  (TBBR is uncalibrated detection-only; TUM2TWIN TIR is uncalibrated intensity; Twin Houses is
+  calibrated but point-wise.) The credible real story is therefore: physics-exact on synthetic +
+  real-geometry, **plus a calibrated thermal-field check against ThermoScenes/TSDN**, with TBBR
+  as a localisation auxiliary and Twin Houses as the point-calibrated U/heat-flux readout. The
+  genuine surviving gap: a calibrated dense field over a *whole* real envelope *with* paired
+  material/U/boundary GT at scale — a contribution gap, not a validation blocker. See
+  `docs/data_inventory.md` §4.
 
 ## 3. The corpora (what makes grids fail)
 
