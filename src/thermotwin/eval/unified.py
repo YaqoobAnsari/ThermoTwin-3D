@@ -63,7 +63,7 @@ CROSS_TASK = [
     ("Twin Houses", "real measured U", "results/twin_houses/summary.json",
      "per-element U vs documented (real assemblies)", ["u_mae", "u_max_error", "n_elements"]),
     ("ThermoScenes", "real calibrated thermal", "results/thermoscenes/summary.json",
-     "calibrated-°C heat-loss localisation (3-D fused)", ["fused_3d"]),
+     "measured 3-D thermal-field decomposition on real facade geometry (ladder rung 2)", ["fused_3d"]),
     ("TBBR", "real bridge detection", "results/tbbr/summary.json",
      "heat-loss saliency vs annotated bridges", ["precision", "bridge_recall", "enrichment"]),
     ("TUM2TWIN-TIR", "real measured thermal", "results/tum2twin_tir/summary.json",

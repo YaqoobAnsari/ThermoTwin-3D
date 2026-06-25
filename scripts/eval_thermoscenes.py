@@ -113,19 +113,47 @@ def main() -> None:
             save_figure(_figure(scene, celsius, mask), out / f"{scene}_thermal")
             n_fig += 1
 
-    # 3-D fusion: calibrated thermal onto the COLMAP facade + the operator/prior-baseline residual.
+    # 3-D fusion + measured-field decomposition (validation-ladder rung 2): calibrated thermal
+    # onto the COLMAP facade, then decompose the *measured* field into the part a geometry-driven
+    # predictor explains vs the localized residual an operator / the inverse twin must recover.
     fused_info = None
     try:
         xyz, cel = fuse_thermal_to_geometry(zf, a.fuse_scene)
         base, resid, mask = baseline_residual(xyz, cel)
         save_figure(_figure3d(a.fuse_scene, xyz, cel, base, resid, mask), out / f"{a.fuse_scene}_fused3d")
+        cel64 = cel.astype(np.float64)
+        # Two reference forward predictions of the measured field, scored as field error:
+        #  - uniform clear-wall (predict the facade mean): the null a geometry model must beat;
+        #  - geometry-local smooth baseline: how far a smooth predictor gets.
+        # rel-L2 is on the mean-removed field (the absolute offset is set by unknown T_in/T_out).
+        centred = cel64 - cel64.mean()
+        denom = float(np.linalg.norm(centred)) + 1e-9
+        rmse_uniform = float(cel64.std())
+        rmse_smooth = float(resid.std())
+        smooth_explained = 1.0 - float(resid.var() / (cel64.var() + 1e-12))
         fused_info = {
             "scene": a.fuse_scene, "n_points": int(len(xyz)),
             "measured_C_min": round(float(cel.min()), 2), "measured_C_max": round(float(cel.max()), 2),
-            "residual_C_std": round(float(resid.std()), 3),
+            "measured_std_C": round(rmse_uniform, 3),
+            # forward field-prediction quality (lower rel-L2 / RMSE = better):
+            "uniform_pred_rmse_C": round(rmse_uniform, 3),
+            "uniform_pred_rel_l2": 1.0,  # mean-removed field vs uniform == full residual by definition
+            "smooth_pred_rmse_C": round(rmse_smooth, 3),
+            "smooth_pred_rel_l2": round(float(np.linalg.norm(resid)) / denom, 3),
+            "smooth_explained_frac": round(smooth_explained, 3),
+            # the localized signal left over — the inverse twin's (H2) target:
+            "anomaly_residual_std_C": round(rmse_smooth, 3),
             "anomaly_point_frac": round(float(mask.mean()), 4),
+            "note": (
+                "measured 3-D thermal field (calibrated °C) on real facade geometry. A geometry-local "
+                "smoother explains smooth_explained_frac of the field; the anomaly residual is the "
+                "localized heat-loss an operator with known materials, or the inverse twin, must "
+                "recover. Absolute scale unconstrained (T_in/T_out not in the dataset), so rel-L2 is "
+                "on the mean-removed field."
+            ),
         }
-        print(f"3-D fused {a.fuse_scene}: {len(xyz)} pts, residual σ={resid.std():.2f}°C, "
+        print(f"3-D fused {a.fuse_scene}: {len(xyz)} pts | measured σ={rmse_uniform:.2f}°C | "
+              f"smooth explains {100 * smooth_explained:.0f}% | residual σ={rmse_smooth:.2f}°C | "
               f"anomalies {100 * mask.mean():.1f}%")
     except Exception as exc:
         print(f"3-D fusion skipped for {a.fuse_scene}: {exc}")

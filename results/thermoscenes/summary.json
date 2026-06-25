@@ -79,7 +79,14 @@
     "n_points": 1620,
     "measured_C_min": 8.04,
     "measured_C_max": 14.95,
-    "residual_C_std": 0.66,
-    "anomaly_point_frac": 0.0216
+    "measured_std_C": 1.088,
+    "uniform_pred_rmse_C": 1.088,
+    "uniform_pred_rel_l2": 1.0,
+    "smooth_pred_rmse_C": 0.66,
+    "smooth_pred_rel_l2": 0.607,
+    "smooth_explained_frac": 0.632,
+    "anomaly_residual_std_C": 0.66,
+    "anomaly_point_frac": 0.0216,
+    "note": "measured 3-D thermal field (calibrated \u00b0C) on real facade geometry. A geometry-local smoother explains smooth_explained_frac of the field; the anomaly residual is the localized heat-loss an operator with known materials, or the inverse twin, must recover. Absolute scale unconstrained (T_in/T_out not in the dataset), so rel-L2 is on the mean-removed field."
   }
 }

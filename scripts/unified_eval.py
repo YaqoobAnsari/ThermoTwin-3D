@@ -98,9 +98,12 @@ def build_markdown(res: dict) -> str:
                        f"(8/9 exact; roof Δ = rafter bridging the 1-D prior misses)")
         elif ct["name"] == "ThermoScenes":
             f3 = m.get("fused_3d") or {}
-            res_str = (f"calibrated 3-D fusion: {f3.get('n_points', '?')} pts, residual σ "
-                       f"{f3.get('residual_C_std', '?')} °C, anomalies "
-                       f"{100 * f3.get('anomaly_point_frac', 0):.1f}%")
+            res_str = (
+                f"**measured 3-D field** ({f3.get('n_points', '?')} pts, σ "
+                f"{f3.get('measured_std_C', '?')} °C): a geometry-local predictor explains "
+                f"**{100 * f3.get('smooth_explained_frac', 0):.0f}%** of the facade field; localized "
+                f"residual σ {f3.get('anomaly_residual_std_C', '?')} °C is the inverse-twin (H2) target"
+            )
         elif ct["name"] == "TBBR":
             res_str = (f"precision {m['precision']:.3f}, bridge-recall {m['bridge_recall']:.2f}, "
                        f"**enrichment {m['enrichment']:.2f}×** (<1 ⇒ saliency ≠ a trained detector)")

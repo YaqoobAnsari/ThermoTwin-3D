@@ -3,22 +3,34 @@
     "synthetic-box",
     "synthetic-irregular",
     "synthetic-hard",
-    "real-CityGML"
+    "real-CityGML",
+    "DOE-refbldg"
   ],
   "models": [
     "delta_transolver",
     "transolver",
+    "delta_gnot",
+    "gnot",
     "delta_gino",
     "gino",
+    "delta_deeponet",
+    "deeponet",
+    "delta_pointnet2",
+    "pointnet2",
+    "delta_meshgraphnet",
+    "meshgraphnet",
     "fno_voxel",
     "prior_only"
   ],
   "metrics": [
     "field_rel_l2",
+    "field_rmse_k",
+    "field_rel_l2_bridge",
     "u_mae",
     "bridge_correction_rel_l2",
     "bridge_bridge_corr_rel_l2_t002",
     "bridge_correction_r2",
+    "n_params",
     "infer_ms_per_sample"
   ],
   "matrix": {
@@ -26,6 +38,8 @@
       "synthetic-box": {
         "delta_transolver": null,
         "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.02547098504222352,
           0.00023090837436577798
@@ -34,6 +48,12 @@
           0.02431449370730358,
           0.0002674542437723917
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.01964584540595145,
           5.6033015941122686e-05
@@ -52,6 +72,8 @@
           0.10677074415919681,
           0.017142037700165334
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.06358608964364976,
           0.001533208768646608
@@ -60,6 +82,12 @@
           0.16683264957585683,
           0.004586283291230548
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.060300645612490676,
           0.0013813059149305265
@@ -78,6 +106,8 @@
           0.036849949217867106,
           7.377209089184326e-05
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.03142534622262853,
           0.00040463033984370527
@@ -86,6 +116,12 @@
           0.02583831359515898,
           0.0009639662931434856
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.023295859660720453,
           0.00021585397876872255
@@ -104,6 +140,8 @@
           0.2454326338711239,
           0.0008739519839171143
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.025360948565815177,
           0.0020934764450431637
@@ -112,6 +150,12 @@
           0.8076856970787047,
           0.04791676352704358
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.4310192147890726,
           7.886147494566496e-06
@@ -120,12 +164,212 @@
           0.015232941428465504,
           1.734723475976807e-18
         ]
+      },
+      "DOE-refbldg": {
+        "delta_transolver": [
+          0.007731438666168187,
+          0.0002594935163912665
+        ],
+        "transolver": [
+          0.4742300320002768,
+          0.0674389201750282
+        ],
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": [
+          0.008213033518081324,
+          0.0002945014350071799
+        ],
+        "gino": [
+          0.7119129664368099,
+          0.009179428759572847
+        ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": [
+          0.5083211527930366,
+          1.6217047102048093e-05
+        ],
+        "prior_only": [
+          0.0074511725979391485,
+          0.0
+        ]
+      }
+    },
+    "field_rmse_k": {
+      "synthetic-box": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "synthetic-irregular": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "synthetic-hard": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "real-CityGML": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "DOE-refbldg": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      }
+    },
+    "field_rel_l2_bridge": {
+      "synthetic-box": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "synthetic-irregular": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "synthetic-hard": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "real-CityGML": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "DOE-refbldg": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
       }
     },
     "u_mae": {
       "synthetic-box": {
         "delta_transolver": null,
         "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.048558888782960385,
           0.0011691831671937149
@@ -134,6 +378,12 @@
           0.04925337748621139,
           0.0036517616325153364
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.0450263942177214,
           0.0003839615735487525
@@ -152,6 +402,8 @@
           0.28502639271154634,
           0.006568815786138812
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.2973845286449994,
           0.004150763005511914
@@ -160,6 +412,12 @@
           0.4797762793622393,
           0.042884439536570895
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.29181669025555834,
           0.0026892864829313225
@@ -178,6 +436,8 @@
           0.05167102120686637,
           0.0022607696754799616
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.04851266488561812,
           0.002610253746245233
@@ -186,6 +446,12 @@
           0.047620476470092175,
           0.002008235408578382
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.039035472807081695,
           0.0005344849646275474
@@ -204,6 +470,8 @@
           0.026893616278969693,
           0.002448743668427529
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.005773112235933161,
           0.001964566163038375
@@ -212,6 +480,12 @@
           0.2120111086989788,
           0.05600729641286878
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.05302970816893937,
           9.3247776687115e-05
@@ -220,14 +494,56 @@
           9.477922388193402e-09,
           0.0
         ]
+      },
+      "DOE-refbldg": {
+        "delta_transolver": [
+          0.0045968272726837345,
+          0.0022277199464668224
+        ],
+        "transolver": [
+          0.1349413965963037,
+          0.0764401138571166
+        ],
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": [
+          0.0035275199068329397,
+          0.001071815079214871
+        ],
+        "gino": [
+          0.2541439925063412,
+          0.038838357855786834
+        ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": [
+          0.11766624233248169,
+          0.0008545659583934057
+        ],
+        "prior_only": [
+          2.9628856978991536e-08,
+          0.0
+        ]
       }
     },
     "bridge_correction_rel_l2": {
       "synthetic-box": {
         "delta_transolver": null,
         "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": null,
         "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": null,
         "prior_only": null
       },
@@ -240,6 +556,8 @@
           0.867337142934638,
           0.16388520108132026
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.6012814299818228,
           0.018206572778422178
@@ -248,6 +566,12 @@
           1.4641587670860108,
           0.05537975677191143
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.5234521677220699,
           0.01876911834654867
@@ -266,6 +590,8 @@
           0.6062571347162483,
           0.001284665252755882
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.562579219581053,
           0.005961027723040896
@@ -274,6 +600,12 @@
           0.43607442531144486,
           0.01686483791303069
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.38888838835291395,
           0.004142128319817276
@@ -292,6 +624,8 @@
           13.868639504077377,
           0.052360988192744796
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           1.5252278634505927,
           0.12078319937223213
@@ -300,6 +634,12 @@
           46.07472015783052,
           2.9129031745744487
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           24.361847086732762,
           0.0005963104465528899
@@ -308,14 +648,56 @@
           0.999999997917223,
           1.1102230246251565e-16
         ]
+      },
+      "DOE-refbldg": {
+        "delta_transolver": [
+          1.0025511773380182,
+          0.013711444840651354
+        ],
+        "transolver": [
+          48.694823242361565,
+          7.262754225868948
+        ],
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": [
+          1.0920050822065637,
+          0.048429058916884864
+        ],
+        "gino": [
+          73.25804175078004,
+          0.7217789805147036
+        ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": [
+          51.92152442856959,
+          0.0015461575822467058
+        ],
+        "prior_only": [
+          0.9999999903162115,
+          0.0
+        ]
       }
     },
     "bridge_bridge_corr_rel_l2_t002": {
       "synthetic-box": {
         "delta_transolver": null,
         "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": null,
         "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": null,
         "prior_only": null
       },
@@ -328,6 +710,8 @@
           0.667418984383037,
           0.09375116859743388
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.5761563842858254,
           0.018237675570450175
@@ -336,6 +720,12 @@
           0.8669069404590076,
           0.0012014110932412026
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.45572781133903645,
           0.02058953943537918
@@ -354,6 +744,8 @@
           0.5756760880335411,
           0.002373882580104289
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.5454923017930461,
           0.006915185621565612
@@ -362,6 +754,12 @@
           0.3911811079785405,
           0.01341640380156377
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.334998900961652,
           0.003720595256138013
@@ -380,6 +778,8 @@
           3.1856346020096367,
           0.00950045084171992
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           1.0090351454995126,
           0.003793705226390323
@@ -388,6 +788,12 @@
           8.917429864099097,
           0.4333546900292732
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           4.533591188163979,
           0.0012437344671985056
@@ -396,14 +802,56 @@
           0.9999999978366217,
           1.1102230246251565e-16
         ]
+      },
+      "DOE-refbldg": {
+        "delta_transolver": [
+          0.8814487617959142,
+          0.07265025732204218
+        ],
+        "transolver": [
+          4.475659516178514,
+          0.09708629914172243
+        ],
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": [
+          0.9861979875663159,
+          0.004448133520283336
+        ],
+        "gino": [
+          8.645367393465088,
+          0.42633520010746756
+        ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": [
+          6.33336419058104,
+          0.005723407236437033
+        ],
+        "prior_only": [
+          0.9999999896678465,
+          0.0
+        ]
       }
     },
     "bridge_correction_r2": {
       "synthetic-box": {
         "delta_transolver": null,
         "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": null,
         "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": null,
         "prior_only": null
       },
@@ -416,6 +864,8 @@
           0.20114606183485398,
           0.30573216586401114
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.6289692705084519,
           0.022661757840373286
@@ -424,6 +874,12 @@
           -1.2011696087663795,
           0.16439803714455845
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.7187009235054189,
           0.020252291961057795
@@ -442,6 +898,8 @@
           0.6264989215784121,
           0.001582808680966126
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           0.6783435132770937,
           0.006790296340182464
@@ -450,6 +908,12 @@
           0.8064707979622296,
           0.014916992064801777
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           0.8462994563105349,
           0.00327579558049565
@@ -468,6 +932,8 @@
           -194.5293090138773,
           1.4755313281983735
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           -1.3797011273910709,
           0.36922710754379195
@@ -476,6 +942,12 @@
           -2165.684885717636,
           277.17106387240085
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           -602.3348087476412,
           0.02953585175619753
@@ -484,12 +956,130 @@
           -0.016571557088968403,
           0.0
         ]
+      },
+      "DOE-refbldg": {
+        "delta_transolver": [
+          -0.010538796678395745,
+          0.027623595407156955
+        ],
+        "transolver": [
+          -2435.5725504200973,
+          746.5556605996314
+        ],
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": [
+          -0.20105063797668335,
+          0.1048415762911733
+        ],
+        "gino": [
+          -5394.248213575606,
+          105.97670812551318
+        ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": [
+          -2708.901672088389,
+          0.16139660090052863
+        ],
+        "prior_only": [
+          -0.005214290800885646,
+          0.0
+        ]
+      }
+    },
+    "n_params": {
+      "synthetic-box": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "synthetic-irregular": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "synthetic-hard": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "real-CityGML": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
+      },
+      "DOE-refbldg": {
+        "delta_transolver": null,
+        "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": null,
+        "gino": null,
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": null,
+        "prior_only": null
       }
     },
     "infer_ms_per_sample": {
       "synthetic-box": {
         "delta_transolver": null,
         "transolver": null,
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           10.258181988319848,
           0.061265757935032174
@@ -498,6 +1088,12 @@
           10.645700477956174,
           0.47161016546629775
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           7.665531515764694,
           6.597487689088866
@@ -516,6 +1112,8 @@
           6.136129287673005,
           0.007902322757050943
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           10.617309754403928,
           0.02949471863475353
@@ -524,6 +1122,12 @@
           10.756381025809484,
           0.2265321425889336
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           3.0867344272943833,
           0.125343133161633
@@ -542,6 +1146,8 @@
           10.406484820123296,
           0.028228834490691367
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           14.428180569666438,
           0.13293999612400753
@@ -550,6 +1156,12 @@
           14.749947324162349,
           0.5243056139450922
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           3.5452282584932013,
           0.7467662326640779
@@ -568,6 +1180,8 @@
           10.221586376428604,
           0.02940925884969349
         ],
+        "delta_gnot": null,
+        "gnot": null,
         "delta_gino": [
           14.085094369060934,
           0.03411406353927304
@@ -576,6 +1190,12 @@
           14.293343345412895,
           0.31322060426587295
         ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
         "fno_voxel": [
           3.1016628390976364,
           0.0887077835049836
@@ -583,6 +1203,40 @@
         "prior_only": [
           0.00456763387081169,
           0.0006871592949086472
+        ]
+      },
+      "DOE-refbldg": {
+        "delta_transolver": [
+          10.479449895986667,
+          0.03954550061915656
+        ],
+        "transolver": [
+          10.419847780010768,
+          0.026086372345548677
+        ],
+        "delta_gnot": null,
+        "gnot": null,
+        "delta_gino": [
+          13.068137522269454,
+          0.117186764158894
+        ],
+        "gino": [
+          13.295975462016132,
+          0.20536109821643692
+        ],
+        "delta_deeponet": null,
+        "deeponet": null,
+        "delta_pointnet2": null,
+        "pointnet2": null,
+        "delta_meshgraphnet": null,
+        "meshgraphnet": null,
+        "fno_voxel": [
+          4.481945697787322,
+          1.8798182104278036
+        ],
+        "prior_only": [
+          0.006679497245285246,
+          0.0037078916162711197
         ]
       }
     }
@@ -666,7 +1320,7 @@
     {
       "dataset": "ThermoScenes",
       "family": "real calibrated thermal",
-      "validates": "calibrated-\u00b0C heat-loss localisation (3-D fused)",
+      "validates": "measured 3-D thermal-field decomposition on real facade geometry (ladder rung 2)",
       "metrics": {
         "archive": "/data/gpfs/projects/punim2769/ThermoTwin-3D/data/raw/thermoscenes/ThermoScenes_full.zip",
         "scenes": [
@@ -748,8 +1402,15 @@
           "n_points": 1620,
           "measured_C_min": 8.04,
           "measured_C_max": 14.95,
-          "residual_C_std": 0.66,
-          "anomaly_point_frac": 0.0216
+          "measured_std_C": 1.088,
+          "uniform_pred_rmse_C": 1.088,
+          "uniform_pred_rel_l2": 1.0,
+          "smooth_pred_rmse_C": 0.66,
+          "smooth_pred_rel_l2": 0.607,
+          "smooth_explained_frac": 0.632,
+          "anomaly_residual_std_C": 0.66,
+          "anomaly_point_frac": 0.0216,
+          "note": "measured 3-D thermal field (calibrated \u00b0C) on real facade geometry. A geometry-local smoother explains smooth_explained_frac of the field; the anomaly residual is the localized heat-loss an operator with known materials, or the inverse twin, must recover. Absolute scale unconstrained (T_in/T_out not in the dataset), so rel-L2 is on the mean-removed field."
         }
       }
     },
