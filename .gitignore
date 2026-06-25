@@ -86,6 +86,8 @@ wandb/
 !results/block2_hard_benchmark.md
 !results/block2_irreg_ops_benchmark.json
 !results/block2_irreg_ops_benchmark.md
+!results/block2_realcg_benchmark.json
+!results/block2_realcg_benchmark.md
 !results/thermal_sample/
 !results/thermal_sample/summary.json
 !results/thermal_sample/contact_sheet.png
