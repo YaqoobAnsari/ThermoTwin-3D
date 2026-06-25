@@ -262,6 +262,9 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
         "u_improvement_x": (base["u_mae"] / op["u_mae"]) if op["u_mae"] else None,
         "infer_ms_per_sample": float(np.mean(times) * 1e3),
         **{f"bridge_{k}": v for k, v in bridge.items()},
+        # Per-sample val predictions (popped by main for --save-preds; never JSON-serialised).
+        "_sample_preds": pred_all,
+        "_sample_files": [Path(f).name for f in getattr(val_ds, "files", [])],
     }
 
 
@@ -350,6 +353,13 @@ def main() -> None:
     )
     p.add_argument("--num_workers", type=int, default=0)
     p.add_argument(
+        "--save-preds",
+        dest="save_preds",
+        action="store_true",
+        help="dump per-sample val predictions (first seed) to results/preds/<stem>__<model>.npz "
+        "for the viz prediction-overlay (scripts/make_figures.py --preds).",
+    )
+    p.add_argument(
         "--out_stem",
         default=None,
         help=(
@@ -430,6 +440,18 @@ def main() -> None:
             params = 0 if model is None else sum(q.numel() for q in model.parameters())
             train_s = 0.0 if model is None else _train_one(model, kind, train_ds, a, device)
             m = _eval_model(model, kind, val_ds, device)
+            # Per-sample predictions are popped here so they never bloat the JSON; saved (first
+            # seed only) when --save-preds, for the viz prediction-overlay (scripts/make_figures).
+            sample_preds = m.pop("_sample_preds", None)
+            sample_files = m.pop("_sample_files", None)
+            if a.save_preds and seed == a.seeds[0] and sample_preds is not None:
+                pdir = _REPO / "results" / "preds"
+                pdir.mkdir(parents=True, exist_ok=True)
+                np.savez(
+                    pdir / f"{out_stem}__{name}.npz",
+                    files=np.array(sample_files, dtype=object),
+                    **{f"p{i}": v for i, v in enumerate(sample_preds)},
+                )
             m["seed"] = seed
             m["train_time_s"] = round(train_s, 1)
             per_seed.append(m)

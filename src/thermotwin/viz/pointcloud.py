@@ -26,18 +26,25 @@ def scatter_3d(ax, points: np.ndarray, values: np.ndarray, *, cmap: str, vmin=No
     p = ax.scatter(x, y, z, c=values, cmap=cmap, vmin=vmin, vmax=vmax, s=s, alpha=0.85,
                    depthshade=False, linewidths=0)
     ax.set_title(title, pad=2)
-    # equal box aspect from the data extent
-    r = np.ptp(points, axis=0)
+    # True geometric aspect from the data extent, but zoomed in so an elongated shell fills
+    # the panel instead of shrinking to a sliver; tight limits remove matplotlib's auto-margin.
+    r = np.ptp(points, axis=0).astype(float)
     r[r == 0] = 1.0
-    ax.set_box_aspect(tuple(r))
-    ax.view_init(elev=22, azim=-58)
+    try:
+        ax.set_box_aspect(tuple(r), zoom=1.4)
+    except TypeError:  # older matplotlib without the zoom kwarg
+        ax.set_box_aspect(tuple(r))
+    ax.set_xlim(x.min(), x.max())
+    ax.set_ylim(y.min(), y.max())
+    ax.set_zlim(z.min(), z.max())
+    ax.view_init(elev=24, azim=-55)
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_zticks([])
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_alpha(0.04)
         axis.line.set_color((0, 0, 0, 0.25))
-    cb = ax.figure.colorbar(p, ax=ax, fraction=0.030, pad=0.02, shrink=0.7)
+    cb = ax.figure.colorbar(p, ax=ax, fraction=0.025, pad=0.0, shrink=0.6)
     cb.ax.tick_params(labelsize=7)
     if cbar_label:
         cb.set_label(cbar_label, fontsize=8)
@@ -79,11 +86,11 @@ def figure_pointcloud_sample(npz_path: str | Path, pred: np.ndarray | None = Non
         ]
 
     n = len(panels)
-    ncol = min(4, n)
+    ncol = 2  # 2-up so each 3-D panel is large and legible (4 panels -> 2x2, 6 -> 3x2)
     nrow = int(np.ceil(n / ncol))
-    fig = plt.figure(figsize=(3.4 * ncol, 3.2 * nrow))
+    fig = plt.figure(figsize=(5.2 * ncol, 4.4 * nrow))
     for i, (vals, cmap, vmn, vmx, clab, title) in enumerate(panels):
         ax = fig.add_subplot(nrow, ncol, i + 1, projection="3d")
-        scatter_3d(ax, pts, vals, cmap=cmap, vmin=vmn, vmax=vmx, title=title, cbar_label=clab)
+        scatter_3d(ax, pts, vals, cmap=cmap, vmin=vmn, vmax=vmx, title=title, cbar_label=clab, s=4.0)
     fig.suptitle(f"Point-cloud sample — {Path(npz_path).name}  ({len(d['points'])} pts)", fontsize=11)
     return fig

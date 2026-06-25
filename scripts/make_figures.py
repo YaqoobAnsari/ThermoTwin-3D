@@ -53,19 +53,44 @@ def _pick(corpus: str, prefer_bridges: bool = True) -> Path | None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--out", default=str(OUT), help="output directory for figures")
-    p.add_argument("--sample", default=None, help="render this one .npz point-cloud sample only")
-    p.add_argument("--pred", default=None, help="optional prediction .npy to overlay (pred + error panels)")
+    p.add_argument("--sample", default=None, help="render this one .npz sample only (2-D or point-cloud)")
+    p.add_argument("--pred", default=None, help="prediction .npy aligned to --sample (pred + error panels)")
+    p.add_argument(
+        "--preds",
+        default=None,
+        help="a results/preds/<stem>__<model>.npz dump; the prediction for --sample is matched "
+        "by file name and overlaid (pred + signed-error panels).",
+    )
     a = p.parse_args()
 
     apply_style()
     out = Path(a.out)
-    pred = np.load(a.pred) if a.pred else None
     made: list[Path] = []
 
-    if a.sample:  # single-sample mode
+    # Resolve a prediction for the chosen sample, from an explicit .npy or a --preds dump.
+    pred = None
+    if a.pred:
+        pred = np.load(a.pred)
+    elif a.preds and a.sample:
+        z = np.load(a.preds, allow_pickle=True)
+        files = [str(x) for x in z["files"]]
+        nm = Path(a.sample).name
+        if nm in files:
+            pred = z[f"p{files.index(nm)}"]
+            print(f"overlaying prediction for {nm} from {Path(a.preds).name}")
+        else:
+            print(f"warning: {nm} not in {a.preds} — rendering ground truth only")
+
+    if a.sample:  # single-sample mode — dispatch on what the .npz contains
         s = Path(a.sample)
-        made += save_figure(figure_pointcloud_sample(s, pred=pred), out / f"pointcloud_{s.stem}")
-        made += save_figure(figure_sdf(s), out / f"sdf_{s.stem}")
+        keys = set(np.load(s, allow_pickle=True).keys())
+        if "points" in keys:  # point-cloud sample
+            made += save_figure(figure_pointcloud_sample(s, pred=pred), out / f"pointcloud_{s.stem}")
+            made += save_figure(figure_sdf(s), out / f"sdf_{s.stem}")
+        elif {"k", "temperature"} <= keys:  # Block-1 2-D grid sample
+            made += save_figure(figure_block1_sample(s, pred=pred), out / f"block1_{s.stem}")
+        else:
+            raise SystemExit(f"don't know how to render {s} (keys: {sorted(keys)})")
     else:  # full gallery
         b1 = _pick("block1_val")
         if b1:
@@ -83,7 +108,10 @@ def main() -> None:
 
     print(f"wrote {len(made)} files to {out}/:")
     for f in made:
-        print("  ", f.relative_to(_REPO))
+        try:
+            print("  ", f.resolve().relative_to(_REPO))
+        except ValueError:
+            print("  ", f)
 
 
 if __name__ == "__main__":
