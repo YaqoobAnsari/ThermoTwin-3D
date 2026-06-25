@@ -52,9 +52,14 @@ WIRED_MODELS = ("fno", "cnn", "unet", "delta_fno", "ufno")
 # Geometry-conditioned operators built directly via their builders (point-cloud forward,
 # not the (B,C,H,W) grid contract): gino/delta_gino (models/gino.py, latent-grid GNO+FNO)
 # and transolver/delta_transolver (models/transolver.py, gridless physics-attention).
-GEOMETRY_MODELS = ("gino", "delta_gino", "transolver", "delta_transolver")
-# Vendored under vendored/; wire when point-cloud featurisation exists (Block 2+).
-DEFERRED_MODELS = ("gnot", "transolver", "meshgraphnet", "deeponet", "pointnet2")
+GEOMETRY_MODELS = (
+    "gino", "delta_gino", "transolver", "delta_transolver",
+    "gnot", "delta_gnot", "deeponet", "delta_deeponet",
+    "pointnet2", "delta_pointnet2", "meshgraphnet", "delta_meshgraphnet",
+)
+# All four architecture families are now implemented as gridless point-cloud operators
+# (models/{gnot,deeponet,pointnet2,meshgraphnet}.py) and built directly by the Block-2 runner.
+DEFERRED_MODELS: tuple[str, ...] = ()
 
 
 def build_model(model_cfg: Mapping) -> nn.Module:

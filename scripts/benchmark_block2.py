@@ -58,8 +58,15 @@ from thermotwin.data.pointcloud_dataset import (  # noqa: E402
 from thermotwin.eval.bridge_metrics import bridge_focused_metrics  # noqa: E402
 from thermotwin.eval.building import u_from_indoor_face_cloud, u_value_report  # noqa: E402
 from thermotwin.eval.metrics import relative_l2  # noqa: E402
+from thermotwin.models.deeponet import build_deeponet, build_delta_deeponet  # noqa: E402
 from thermotwin.models.fno import build_fno  # noqa: E402
 from thermotwin.models.gino import build_delta_gino, build_gino  # noqa: E402
+from thermotwin.models.gnot import build_delta_gnot, build_gnot  # noqa: E402
+from thermotwin.models.meshgraphnet import (  # noqa: E402
+    build_delta_meshgraphnet,
+    build_meshgraphnet,
+)
+from thermotwin.models.pointnet2 import build_delta_pointnet2, build_pointnet2  # noqa: E402
 from thermotwin.models.transolver import build_delta_transolver, build_transolver  # noqa: E402
 from thermotwin.utils.seed import seed_everything  # noqa: E402
 
@@ -76,13 +83,28 @@ ROSTER: dict[str, str] = {
     "delta_gino": "delta_gino",
     "transolver": "transolver",
     "delta_transolver": "delta_transolver",
+    "gnot": "gnot",
+    "delta_gnot": "delta_gnot",
+    "deeponet": "deeponet",
+    "delta_deeponet": "delta_deeponet",
+    "pointnet2": "pointnet2",
+    "delta_pointnet2": "delta_pointnet2",
+    "meshgraphnet": "meshgraphnet",
+    "delta_meshgraphnet": "delta_meshgraphnet",
     "fno_voxel": "fno_voxel",
     "prior_only": "prior_only",
 }
 # Data-only point-cloud kinds (prior channel dropped from the features they see).
-_DATA_ONLY_CLOUD = ("gino", "transolver")
+_DATA_ONLY_CLOUD = ("gino", "transolver", "gnot", "deeponet", "pointnet2", "meshgraphnet")
 # Delta point-cloud kinds (full features incl. theta1d + the prior added back per query).
-_DELTA_CLOUD = ("delta_gino", "delta_transolver")
+_DELTA_CLOUD = (
+    "delta_gino",
+    "delta_transolver",
+    "delta_gnot",
+    "delta_deeponet",
+    "delta_pointnet2",
+    "delta_meshgraphnet",
+)
 SEEDS = [1337, 1]
 
 # Latent / voxel grid resolution (the SDF is stored at G=16); FNO modes stay < G//2.
@@ -144,6 +166,26 @@ def _build(kind: str, device: str, accel: bool = True) -> torch.nn.Module | None
         model = build_delta_transolver(
             in_channels=4, n_hidden=128, n_layers=8, n_head=8, slice_num=64, mlp_ratio=2
         )
+    elif kind == "gnot":
+        # General Neural Operator Transformer — linear attention + geometry-gated MoE (data-only).
+        model = build_gnot(in_channels=3, n_hidden=128, n_layers=6, n_head=8, n_experts=4)
+    elif kind == "delta_gnot":
+        model = build_delta_gnot(in_channels=4, n_hidden=128, n_layers=6, n_head=8, n_experts=4)
+    elif kind == "deeponet":
+        # Canonical branch/trunk operator baseline (global branch -> low geometric bias).
+        model = build_deeponet(in_channels=3, p=128, hidden=256, depth=4)
+    elif kind == "delta_deeponet":
+        model = build_delta_deeponet(in_channels=4, p=128, hidden=256, depth=4)
+    elif kind == "pointnet2":
+        # Hierarchical point network (set abstraction + feature propagation).
+        model = build_pointnet2(in_channels=3, k=16, width=128)
+    elif kind == "delta_pointnet2":
+        model = build_delta_pointnet2(in_channels=4, k=16, width=128)
+    elif kind == "meshgraphnet":
+        # Message-passing GNN over a k-NN graph (local, fixed receptive field).
+        model = build_meshgraphnet(in_channels=3, k=12, width=128, n_steps=8)
+    elif kind == "delta_meshgraphnet":
+        model = build_delta_meshgraphnet(in_channels=4, k=12, width=128, n_steps=8)
     elif kind == "fno_voxel":
         model = build_fno(
             in_channels=4,  # voxelised [logk_std, r_si, r_se, theta1d]
@@ -251,11 +293,33 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
     # Bridge-focused metrics over the whole val cloud (the localized correction the global
     # field rel-L2 washes out). correction_rel_l2 < 1 means the model beats the prior;
     # prior_only is exactly 1.0 by construction. See eval/bridge_metrics.py.
-    bridge = bridge_focused_metrics(
-        np.concatenate(pred_all), np.concatenate(true_all), np.concatenate(prior_all)
-    )
+    pred_c, true_c, prior_c = np.concatenate(pred_all), np.concatenate(true_all), np.concatenate(prior_all)
+    bridge = bridge_focused_metrics(pred_c, true_c, prior_c)
+    # Holistic dimensions beyond the mean field error:
+    #  - capacity (n_params): accuracy-per-parameter, so a big model's win is contextualised;
+    #  - physical-unit RMSE: θ is dimensionless on ΔT=(T_in−T_out)=20 K across every corpus, so
+    #    RMSE_K = RMSE_θ·20 is the error a practitioner reads (°C/K);
+    #  - tail (p95 / max abs): worst-case point error — thermal bridges are localized hot spots
+    #    a mean washes out;
+    #  - clear-vs-bridge field split: rel-L2 restricted to the bridge region (|true−prior|>τ) vs
+    #    the clear wall, separating "smooth bulk" accuracy from "where the physics is hard".
+    delta_t_k = 20.0
+    abs_err = np.abs(pred_c - true_c)
+    rmse_theta = float(np.sqrt(np.mean((pred_c - true_c) ** 2)))
+    bmask = np.abs(true_c - prior_c) > 0.02
+
+    def _rel(p, t):
+        return float(np.linalg.norm(p - t) / (np.linalg.norm(t) + 1e-12))
+
+    n_params = int(sum(p.numel() for p in model.parameters())) if model is not None else 0
     return {
         "field_rel_l2": float(np.mean(rel_l2s)),
+        "field_rmse_k": rmse_theta * delta_t_k,
+        "field_p95_abs": float(np.percentile(abs_err, 95)),
+        "field_max_abs": float(abs_err.max()),
+        "field_rel_l2_bridge": _rel(pred_c[bmask], true_c[bmask]) if bmask.any() else None,
+        "field_rel_l2_clear": _rel(pred_c[~bmask], true_c[~bmask]) if (~bmask).any() else None,
+        "n_params": n_params,
         "u_mae": op["u_mae"],
         "u_mape": op["u_mape"],
         "u_mae_clear_baseline": base["u_mae"],

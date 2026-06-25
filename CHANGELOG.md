@@ -7,6 +7,18 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Competitor field widened to all four operator families + a holistic metric suite.** To be sure
+  `delta_transolver` isn't winning only because stronger architectures were absent, the bake-off
+  roster grows from 6 → **14 models**: added self-contained gridless implementations of **GNOT**
+  (`models/gnot.py` — linear attention + geometry-gated MoE; the strongest general operator-
+  transformer and the direct Transolver rival), **DeepONet** (`models/deeponet.py` — branch/trunk,
+  the canonical operator baseline), **PointNet++** (`models/pointnet2.py` — set abstraction +
+  feature propagation), and **MeshGraphNet** (`models/meshgraphnet.py` — kNN-graph message
+  passing), each with a delta variant (correction on the 1-D prior) and all honouring the Block-2
+  point-cloud contract. Gated by `tests/test_new_operators.py`; `DEFERRED_MODELS` is now empty.
+  The metric suite gains **physical-unit RMSE (K)**, **bridge-region vs clear-wall field rel-L2**,
+  **worst-case tail (p95 / max |err|)**, and **parameter count** — surfaced in `unified_eval`. Full
+  14-model × 7-corpus re-run submitted (`scripts/slurm/block2_roster.slurm`).
 - **Two more real datasets made comparable: TUM2TWIN LoD3 geometry + the airborne thermal-IR
   orthophoto.** (1) **LoD3 → a higher-fidelity real-geometry column.** TUM2TWIN LoD3 ships the same
   27 buildings as LoD2 but photogrammetric and tessellated (up to 69k triangles/shell), which the

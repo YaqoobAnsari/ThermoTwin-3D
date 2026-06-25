@@ -33,15 +33,26 @@ DATASETS = [
     ("block2_doe_benchmark", "DOE-refbldg", "real constructions", "DOE Reference Buildings (real materials, idealised geometry)"),
 ]
 
-MODELS = ["delta_transolver", "transolver", "delta_gino", "gino", "fno_voxel", "prior_only"]
+MODELS = [
+    "delta_transolver", "transolver",
+    "delta_gnot", "gnot",
+    "delta_gino", "gino",
+    "delta_deeponet", "deeponet",
+    "delta_pointnet2", "pointnet2",
+    "delta_meshgraphnet", "meshgraphnet",
+    "fno_voxel", "prior_only",
+]
 
 # (metric key, label, lower-is-better)
 METRICS = [
     ("field_rel_l2", "field rel-L2 ↓", True),
+    ("field_rmse_k", "field RMSE [K] ↓", True),
+    ("field_rel_l2_bridge", "field rel-L2 @bridge ↓", True),
     ("u_mae", "U-MAE [W/m²K] ↓", True),
     ("bridge_correction_rel_l2", "correction rel-L2 (vs prior) ↓", True),
     ("bridge_bridge_corr_rel_l2_t002", "bridge corr-relL2 (τ=0.02) ↓", True),
     ("bridge_correction_r2", "correction R² ↑", False),
+    ("n_params", "params ↓", True),
     ("infer_ms_per_sample", "infer ms ↓", True),
 ]
 
