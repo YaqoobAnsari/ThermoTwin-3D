@@ -65,6 +65,7 @@ __all__ = [
     "LOGK_STD",
     "surface_frame",
     "generate_corpus_realcg",
+    "generate_corpus_realcg_lod3",
 ]
 
 
@@ -321,6 +322,42 @@ def generate_corpus_realcg(
     :mod:`synthetic_3d` schema.
     """
     envelopes = read_citygml_dir(citygml_dir)[building_start:building_end]
+    return _corpus_from_envelopes(
+        envelopes, n_per_building, seed, grid, n_points, cells_per_layer, cells_in_plane
+    )
+
+
+def generate_corpus_realcg_lod3(
+    citygml_dir: str,
+    n_per_building: int = 5,
+    seed: int = 1337,
+    grid: int = 16,
+    n_points: int = 4096,
+    cells_per_layer: int = 4,
+    cells_in_plane: int = 16,
+    building_start: int = 0,
+    building_end: int | None = None,
+) -> list[dict]:
+    """Real-geometry corpus from TUM2TWIN **LoD3** buildings (higher-fidelity counterpart).
+
+    LoD3 ships the *same* 27 buildings as :func:`generate_corpus_realcg` (LoD2) but
+    photogrammetric and tessellated — tens of thousands of triangles per shell, with dormers,
+    facade breaks and roof superstructures LoD2 smooths away. Each shell is first collapsed back
+    into planar faces by :func:`~thermotwin.geometry.coplanar.merge_coplanar_surfaces` (plane
+    grouping + in-plane connected-components), so the per-surface FV pipeline runs unchanged —
+    on a richer, more orientation-diverse set of real faces than LoD2 offers.
+    """
+    from ..geometry.coplanar import merge_coplanar_surfaces
+
+    raw = read_citygml_dir(citygml_dir)[building_start:building_end]
+    envelopes = []
+    for env in raw:
+        merged = merge_coplanar_surfaces(env.shell_surfaces())
+        if len(merged) < 3:
+            continue
+        envelopes.append(
+            Envelope(materials=dict(env.materials), constructions=dict(env.constructions), surfaces=merged)
+        )
     return _corpus_from_envelopes(
         envelopes, n_per_building, seed, grid, n_points, cells_per_layer, cells_in_plane
     )

@@ -104,6 +104,10 @@ def build_markdown(res: dict) -> str:
         elif ct["name"] == "TBBR":
             res_str = (f"precision {m['precision']:.3f}, bridge-recall {m['bridge_recall']:.2f}, "
                        f"**enrichment {m['enrichment']:.2f}×** (<1 ⇒ saliency ≠ a trained detector)")
+        elif ct["name"] == "TUM2TWIN-TIR":
+            res_str = (f"**enrichment {m['enrichment']:.2f}×** over {m['n_buildings']} modelled "
+                       f"envelopes (measured IR heat-loss anomalies land {m['enrichment']:.1f}× more "
+                       f"on our buildings than off; +{m['mean_building_thermal_contrast_dn']:.0f} DN contrast)")
         else:
             res_str = "—"
         lines.append(f"| {ct['name']} | {ct['family']} | {ct['what']} | {res_str} |")

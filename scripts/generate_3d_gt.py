@@ -42,6 +42,7 @@ from thermotwin.data.real_citygml_3d import (  # noqa: E402
     generate_corpus_bag,
     generate_corpus_doe,
     generate_corpus_realcg,
+    generate_corpus_realcg_lod3,
 )
 from thermotwin.data.synthetic_3d import (  # noqa: E402
     FEATURE_LAYOUT,
@@ -98,6 +99,16 @@ def main() -> None:
         ),
     )
     p.add_argument(
+        "--real-citygml-lod3",
+        default=None,
+        metavar="DIR",
+        help=(
+            "generate the REAL-geometry corpus from TUM2TWIN **LoD3** .gml buildings "
+            "(higher-fidelity, photogrammetric). Each tessellated shell is coplanar-merged into "
+            "planar faces, then the same per-surface FV physics as --real-citygml runs on it."
+        ),
+    )
+    p.add_argument(
         "--bag-cityjson",
         default=None,
         metavar="DIR",
@@ -119,8 +130,11 @@ def main() -> None:
     p.add_argument("--building-end", type=int, default=None, help="building index slice end (exclusive)")
     a = p.parse_args()
 
-    if sum(bool(x) for x in (a.irregular, a.hard, a.real_citygml, a.bag_cityjson, a.doe)) > 1:
-        p.error("--irregular / --hard / --real-citygml / --bag-cityjson / --doe are mutually exclusive")
+    if sum(bool(x) for x in (a.irregular, a.hard, a.real_citygml, a.real_citygml_lod3, a.bag_cityjson, a.doe)) > 1:
+        p.error(
+            "--irregular / --hard / --real-citygml / --real-citygml-lod3 / --bag-cityjson / --doe "
+            "are mutually exclusive"
+        )
 
     out = PROCESSED / a.name
     out.mkdir(parents=True, exist_ok=True)
@@ -133,6 +147,22 @@ def main() -> None:
         )
         records = generate_corpus_realcg(
             a.real_citygml,
+            n_per_building=a.n_per_building,
+            seed=a.seed,
+            grid=a.grid,
+            n_points=a.npts,
+            cells_per_layer=a.cells_per_layer,
+            building_start=a.building_start,
+            building_end=a.building_end,
+        )
+    elif a.real_citygml_lod3:
+        print(
+            f"generating REAL-geometry LoD3 corpus from {a.real_citygml_lod3} "
+            f"(buildings [{a.building_start}:{a.building_end}], {a.n_per_building}/building, "
+            f"grid {a.grid}, npts {a.npts}) -> {out}"
+        )
+        records = generate_corpus_realcg_lod3(
+            a.real_citygml_lod3,
             n_per_building=a.n_per_building,
             seed=a.seed,
             grid=a.grid,
@@ -221,6 +251,8 @@ def main() -> None:
             if a.doe
             else "thermotwin.data.real_citygml_3d.generate_corpus_bag"
             if a.bag_cityjson
+            else "thermotwin.data.real_citygml_3d.generate_corpus_realcg_lod3"
+            if a.real_citygml_lod3
             else "thermotwin.data.real_citygml_3d.generate_corpus_realcg"
             if a.real_citygml
             else "thermotwin.data.synthetic_3d_irreg.generate_corpus_irregular"
@@ -232,6 +264,7 @@ def main() -> None:
         "irregular": bool(a.irregular),
         "hard": bool(a.hard),
         "real_citygml": a.real_citygml or False,
+        "real_citygml_lod3": a.real_citygml_lod3 or False,
         "bag_cityjson": a.bag_cityjson or False,
         "seed": a.seed,
         "n_samples": len(manifest_rows),

@@ -29,6 +29,7 @@ parsing and either re-raise a clear error (single-building API) or skip-and-log
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -43,6 +44,7 @@ __all__ = [
     "parse_poslist",
     "read_citygml_building",
     "read_citygml_dir",
+    "read_citygml_footprints",
 ]
 
 logger = logging.getLogger(__name__)
@@ -278,6 +280,51 @@ def read_citygml_building(
         constructions=dict(constructions),
         surfaces=surfaces,
     )
+
+
+def read_citygml_footprints(
+    dirpath: str | Path, pattern: str = "*.gml"
+) -> list[tuple[str, np.ndarray]]:
+    """Per-building ground footprints in **absolute** CRS coords (e.g. EPSG:25832).
+
+    Unlike :func:`read_citygml_building` (which subtracts a per-building origin to localise),
+    this keeps source coordinates so buildings can be registered onto a georeferenced raster —
+    e.g. projecting the TUM2TWIN footprints onto the thermal orthophoto. The footprint is the
+    convex hull of all surface vertices projected to the ground plane ``(x, y)`` (robust to the
+    absence of an explicit GroundSurface; roofs dominate a nadir thermal view anyway).
+
+    Args:
+        dirpath: directory of ``*.gml`` CityGML buildings.
+        pattern: glob for the files to read.
+
+    Returns:
+        ``(building_id, footprint_xy)`` per readable building — ``footprint_xy`` is an
+        ``(m, 2)`` polygon ring in source CRS units. Unreadable files are skipped.
+    """
+    from scipy.spatial import ConvexHull
+
+    dirpath = Path(dirpath)
+    out: list[tuple[str, np.ndarray]] = []
+    for path in sorted(dirpath.glob(pattern)):
+        try:
+            root = ET.parse(path).getroot()
+        except ET.ParseError as exc:
+            logger.warning("skipping %s: %s", path.name, exc)
+            continue
+        surfaces: list[Surface] = []
+        for building in root.iter(f"{{{CITYGML_NS['bldg']}}}Building"):
+            surfaces.extend(_read_building_element(building, fallback_id=path.stem))
+        if not surfaces:
+            surfaces = _read_building_element(root, fallback_id=path.stem)
+        if not surfaces:
+            continue
+        xy = np.concatenate([s.vertices[:, :2] for s in surfaces])
+        bid = surfaces[0].zone
+        if len(xy) >= 3:
+            with contextlib.suppress(Exception):  # collinear / degenerate -> keep raw points
+                xy = xy[ConvexHull(xy).vertices]
+        out.append((bid, xy))
+    return out
 
 
 def read_citygml_dir(

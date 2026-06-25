@@ -7,6 +7,22 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Two more real datasets made comparable: TUM2TWIN LoD3 geometry + the airborne thermal-IR
+  orthophoto.** (1) **LoD3 → a higher-fidelity real-geometry column.** TUM2TWIN LoD3 ships the same
+  27 buildings as LoD2 but photogrammetric and tessellated (up to 69k triangles/shell), which the
+  per-surface FV corpus cannot consume directly. New `geometry/coplanar.py`
+  (`merge_coplanar_surfaces`) recovers planar wall/roof faces by plane-grouping + in-plane
+  connected-components + a fill-ratio filter (69k tris → ≤250 planar faces, area-faithful to 1.0×),
+  wired as `generate_corpus_realcg_lod3` + `--real-citygml-lod3` + the `realcg_lod3` benchmark
+  corpus + Slurm gen/bake jobs. Gated by `tests/test_coplanar.py`. (2) **TUM2TWIN thermal-IR ortho →
+  the first *measured-thermal* cross-task rung.** New `geometry/geotiff.py` (stdlib GeoTIFF
+  georef reader — no rasterio/gdal) + `data/tum2twin_tir.py` register the CityGML footprints onto
+  the georeferenced IR orthophoto and score heat-loss-anomaly **footprint enrichment = 2.11×**
+  (measured IR heat-loss lands 2.1× more on the 27 envelopes we model than off them; +11 DN
+  contrast) — `scripts/eval_tum2twin_tir.py` → `results/tum2twin_tir/`, surfaced in the unified
+  report's cross-task section. Gated by `tests/test_geotiff.py` + `tests/test_tum2twin_tir.py`.
+  The unified matrix now declares **6 direct corpora** (3 synthetic + real-CityGML LoD2/LoD3 +
+  3D BAG + DOE) and **4 cross-task rungs** (Twin Houses, ThermoScenes, TBBR, TUM2TWIN-TIR).
 - **Block-2 Exp 2.7 — bridge-focused metric: the operator beats the prior where bridges are.**
   New `eval/bridge_metrics.py` (wired into `benchmark_block2.py`, gated by
   `tests/test_bridge_metrics.py`) scores the *correction* — `correction_rel_l2 = ‖pred−true‖ /

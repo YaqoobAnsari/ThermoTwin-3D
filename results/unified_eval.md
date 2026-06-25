@@ -78,6 +78,7 @@ Datasets evaluated: **synthetic-box, synthetic-irregular, synthetic-hard, real-C
 | synthetic-irregular | synthetic geometry | ✅ evaluated | rotated / off-lattice |
 | synthetic-hard | synthetic geometry | ✅ evaluated | sub-voxel thermal fins |
 | real-CityGML | real geometry | ✅ evaluated | TUM2TWIN LoD2 shells, sim. physics |
+| real-CityGML-LoD3 | real geometry | ⏳ bake-off running | TUM2TWIN LoD3 shells (coplanar-merged), sim. physics |
 | real-3DBAG | real geometry | ⏳ bake-off running | 3D BAG Amsterdam LoD2.2 shells, sim. physics |
 | DOE-refbldg | real constructions | ⏳ bake-off running | DOE Reference Buildings (real materials, idealised geometry) |
 
@@ -90,5 +91,6 @@ These real datasets validate *different* quantities than the θ-field matrix, so
 | Twin Houses | real measured U | per-element U vs documented (real assemblies) | **U-MAE 0.0042 W/m²K** over 9 real elements (8/9 exact; roof Δ = rafter bridging the 1-D prior misses) |
 | ThermoScenes | real calibrated thermal | calibrated-°C heat-loss localisation (3-D fused) | calibrated 3-D fusion: 1620 pts, residual σ 0.66 °C, anomalies 2.2% |
 | TBBR | real bridge detection | heat-loss saliency vs annotated bridges | precision 0.008, bridge-recall 0.10, **enrichment 0.77×** (<1 ⇒ saliency ≠ a trained detector) |
+| TUM2TWIN-TIR | real measured thermal | airborne IR heat-loss localisation on the modelled CityGML envelopes | **enrichment 2.11×** over 27 modelled envelopes (measured IR heat-loss anomalies land 2.1× more on our buildings than off; +11 DN contrast) |
 
 **Reading the matrix.** `correction rel-L2` and `bridge corr-relL2` are normalised so `prior_only ≡ 1.000`; **< 1 means the operator genuinely beats the analytic prior**. `delta_transolver` is the lead operator on irregular/real geometry; a voxel grid wins on axis-aligned geometry; data-only operators (gino/transolver) fail on real shells. Field rel-L2 / U-MAE are the absolute-accuracy columns.

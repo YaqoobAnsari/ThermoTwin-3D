@@ -28,6 +28,7 @@ DATASETS = [
     ("block2_irreg_ops_benchmark", "synthetic-irregular", "synthetic geometry", "rotated / off-lattice"),
     ("block2_hard_benchmark", "synthetic-hard", "synthetic geometry", "sub-voxel thermal fins"),
     ("block2_realcg_benchmark", "real-CityGML", "real geometry", "TUM2TWIN LoD2 shells, sim. physics"),
+    ("block2_realcg_lod3_benchmark", "real-CityGML-LoD3", "real geometry", "TUM2TWIN LoD3 shells (coplanar-merged), sim. physics"),
     ("block2_bag_benchmark", "real-3DBAG", "real geometry", "3D BAG Amsterdam LoD2.2 shells, sim. physics"),
     ("block2_doe_benchmark", "DOE-refbldg", "real constructions", "DOE Reference Buildings (real materials, idealised geometry)"),
 ]
@@ -54,6 +55,9 @@ CROSS_TASK = [
      "calibrated-°C heat-loss localisation (3-D fused)", ["fused_3d"]),
     ("TBBR", "real bridge detection", "results/tbbr/summary.json",
      "heat-loss saliency vs annotated bridges", ["precision", "bridge_recall", "enrichment"]),
+    ("TUM2TWIN-TIR", "real measured thermal", "results/tum2twin_tir/summary.json",
+     "airborne IR heat-loss localisation on the modelled CityGML envelopes",
+     ["enrichment", "anomaly_rate_on_buildings", "n_buildings"]),
 ]
 
 

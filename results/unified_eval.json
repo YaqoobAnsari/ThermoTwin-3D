@@ -765,6 +765,21 @@
         "enrichment": 0.7741,
         "note": "physics-motivated heat-loss saliency vs annotated bridges; enrichment > 1 beats random"
       }
+    },
+    {
+      "dataset": "TUM2TWIN-TIR",
+      "family": "real measured thermal",
+      "validates": "airborne IR heat-loss localisation on the modelled CityGML envelopes",
+      "metrics": {
+        "n_buildings": 27,
+        "valid_frac": 0.4384,
+        "footprint_px": 2264,
+        "anomaly_rate_on_buildings": 0.0163,
+        "anomaly_rate_off_buildings": 0.0077,
+        "enrichment": 2.113,
+        "mean_building_thermal_contrast_dn": 10.72,
+        "note": "relative (tone-mapped) thermal; enrichment > 1 \u21d2 measured heat-loss anomalies concentrate on the CityGML building envelopes we model"
+      }
     }
   ]
 }
