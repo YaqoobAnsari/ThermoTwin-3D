@@ -51,6 +51,7 @@ _REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO / "src"))
 
 from thermotwin.data.pointcloud_dataset import (  # noqa: E402
+    PRIOR_CHANNEL,
     PointCloudDataset,
     collate_pointcloud,
     latent_grid_coords,
@@ -93,6 +94,23 @@ ROSTER: dict[str, str] = {
     "delta_meshgraphnet": "delta_meshgraphnet",
     "fno_voxel": "fno_voxel",
     "prior_only": "prior_only",
+    # --- Phase-0 ablations (the decision gate) -------------------------------------------
+    # predict_mean: trivial floor (constant = train-mean theta), no network.
+    # cond_*:       data-only architecture fed the FULL 4-ch features (incl theta1d) but
+    #               predicting the FULL field — prior as INPUT only, no residual add-back.
+    #               Isolates "seeing the prior as a feature" from the delta recipe (B3).
+    # delta_const_*: the delta wrapper, but the theta1d channel and the added-back prior are
+    #               BOTH replaced by a constant — isolates the physics of the prior from
+    #               "any prior + residual learning" (B2/B4).
+    "predict_mean": "predict_mean",
+    "cond_pointnet2": "cond_pointnet2",
+    "cond_transolver": "cond_transolver",
+    "cond_deeponet": "cond_deeponet",
+    "cond_gino": "cond_gino",
+    "delta_const_pointnet2": "delta_const_pointnet2",
+    "delta_const_transolver": "delta_const_transolver",
+    "delta_const_deeponet": "delta_const_deeponet",
+    "delta_const_gino": "delta_const_gino",
 }
 # Data-only point-cloud kinds (prior channel dropped from the features they see).
 _DATA_ONLY_CLOUD = ("gino", "transolver", "gnot", "deeponet", "pointnet2", "meshgraphnet")
@@ -105,6 +123,20 @@ _DELTA_CLOUD = (
     "delta_pointnet2",
     "delta_meshgraphnet",
 )
+# Phase-0 prior-conditioned kinds: data-only architecture, full 4-ch features incl theta1d,
+# predicting the FULL field (no residual add-back). The confound control for B3.
+_PRIOR_COND_CLOUD = ("cond_gino", "cond_transolver", "cond_deeponet", "cond_pointnet2")
+# Phase-0 constant-prior delta kinds: delta wrapper with theta1d + added-back prior both
+# replaced by a non-physics constant. The physics-isolation control for B2/B4.
+_DELTA_CONST_CLOUD = (
+    "delta_const_gino",
+    "delta_const_transolver",
+    "delta_const_deeponet",
+    "delta_const_pointnet2",
+)
+# Set in main() from the training corpus: the constant (mean theta over train samples) used
+# as the non-physics prior for _DELTA_CONST_CLOUD and as the predict_mean control's output.
+_CONST_PRIOR: float = 0.5
 SEEDS = [1337, 1]
 
 # Latent / voxel grid resolution (the SDF is stored at G=16); FNO modes stay < G//2.
@@ -126,9 +158,9 @@ def _build(kind: str, device: str, accel: bool = True) -> torch.nn.Module | None
     cached / torch_cluster CRS is set-identical to the native one); see
     :mod:`thermotwin.models.gino_accel`.
     """
-    if kind == "prior_only":
-        # Zero-parameter control: no network to build. The forward is the prior channel
-        # itself, handled directly in _eval_model; nothing trains.
+    if kind in ("prior_only", "predict_mean"):
+        # Zero-parameter controls: no network to build. prior_only's forward is the prior
+        # channel; predict_mean's is the train-mean constant — both handled in _eval_model.
         return None
     gino_accel = dict(cache_neighbours=accel, neighbour_search_backend="auto")
     if kind == "gino":
@@ -194,6 +226,38 @@ def _build(kind: str, device: str, accel: bool = True) -> torch.nn.Module | None
             hidden_channels=64,
             n_layers=4,
         )
+    # --- Phase-0 ablation variants. cond_* = the data-only architecture built with 4 input
+    # channels (so it ingests theta1d) but predicting the full field; delta_const_* = the
+    # delta architecture (identical to delta_*), the non-physics constant is injected at the
+    # forward, not the build. Both reuse the exact backbone configs of their counterparts. --
+    elif kind == "cond_gino":
+        model = build_gino(
+            in_channels=4, fno_in_channels=32, fno_n_modes=FNO_MODES, fno_hidden_channels=64,
+            fno_n_layers=4, in_gno_radius=GNO_RADIUS, out_gno_radius=GNO_RADIUS,
+            latent_grid=LATENT_GRID, **gino_accel,
+        )
+    elif kind == "delta_const_gino":
+        model = build_delta_gino(
+            in_channels=4, fno_in_channels=32, fno_n_modes=FNO_MODES, fno_hidden_channels=64,
+            fno_n_layers=4, in_gno_radius=GNO_RADIUS, out_gno_radius=GNO_RADIUS,
+            latent_grid=LATENT_GRID, **gino_accel,
+        )
+    elif kind == "cond_transolver":
+        model = build_transolver(
+            in_channels=4, n_hidden=128, n_layers=8, n_head=8, slice_num=64, mlp_ratio=2
+        )
+    elif kind == "delta_const_transolver":
+        model = build_delta_transolver(
+            in_channels=4, n_hidden=128, n_layers=8, n_head=8, slice_num=64, mlp_ratio=2
+        )
+    elif kind == "cond_deeponet":
+        model = build_deeponet(in_channels=4, p=128, hidden=256, depth=4)
+    elif kind == "delta_const_deeponet":
+        model = build_delta_deeponet(in_channels=4, p=128, hidden=256, depth=4)
+    elif kind == "cond_pointnet2":
+        model = build_pointnet2(in_channels=4, k=16, width=128)
+    elif kind == "delta_const_pointnet2":
+        model = build_delta_pointnet2(in_channels=4, k=16, width=128)
     else:  # pragma: no cover - guarded by ROSTER
         raise KeyError(kind)
     return model.to(device)
@@ -230,8 +294,20 @@ def _forward_cloud(model, kind: str, batch: dict, device: str) -> torch.Tensor:
     if kind in _DATA_ONLY_CLOUD:
         feats = batch["gino_feats"].to(device)  # prior channel dropped
         return model(input_geom, feats, latent_queries, sdf, output_queries)
+    if kind in _PRIOR_COND_CLOUD:
+        # Prior-conditioned: full 4-ch features (incl theta1d) but predict the FULL field
+        # (data-only signature, no residual add-back). Isolates prior-as-input from delta.
+        feats = batch["feats"].to(device)
+        return model(input_geom, feats, latent_queries, sdf, output_queries)
     feats = batch["feats"].to(device)  # delta_*: full 4-ch incl theta1d
     prior = batch["prior"].to(device)
+    if kind in _DELTA_CONST_CLOUD:
+        # Replace the physics prior (the theta1d feature channel AND the added-back prior)
+        # with a constant carrying no physics, so the ONLY difference from delta_* is that
+        # the prior is non-physical. Tests whether the win is the physics or any prior.
+        feats = feats.clone()
+        feats[..., PRIOR_CHANNEL] = _CONST_PRIOR
+        prior = torch.full_like(prior, _CONST_PRIOR)
     return model(input_geom, feats, latent_queries, sdf, output_queries, prior)
 
 
@@ -256,6 +332,7 @@ def _trilinear_sample(field: torch.Tensor, points: torch.Tensor) -> torch.Tensor
 def _eval_model(model, kind: str, val_ds, device: str) -> dict:
     """Per-sample field rel-L2 + U-MAE on the validation corpus (scored on points)."""
     rel_l2s, u_pred, u_true, u_clear, times = [], [], [], [], []
+    fluct_rel_l2s = []  # mean-removed rel-L2: ‖pred−θ‖/‖θ−mean(θ)‖ (strips the DC gradient)
     pred_all, true_all, prior_all = [], [], []  # concatenated for the bridge-focused metric
     if model is not None:
         model.eval()
@@ -271,6 +348,9 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
                 # Zero-parameter control: the prediction *is* the per-point prior channel,
                 # scored on the same support with the same field rel-L2 and U estimator.
                 pred = prior.copy()
+            elif kind == "predict_mean":
+                # Trivial floor: constant = train-mean theta (no per-sample/physics info).
+                pred = np.full_like(theta_gt, _CONST_PRIOR)
             elif kind == "fno_voxel":
                 vx = batch["voxel_feats"].to(device)  # (1, F, G, G, G)
                 vox_pred = model(vx)[0, 0]  # (G, G, G)
@@ -282,6 +362,11 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
             rel_l2s.append(
                 relative_l2(torch.from_numpy(pred)[None], torch.from_numpy(theta_gt)[None]).item()
             )
+            # Fluctuation rel-L2: normalise by the mean-removed target so the trivial
+            # through-wall DC gradient (which the analytic prior reproduces for free) no
+            # longer dominates — this is the metric that shows what the operator *adds*.
+            fl_den = float(np.linalg.norm(theta_gt - theta_gt.mean())) + 1e-9
+            fluct_rel_l2s.append(float(np.linalg.norm(pred - theta_gt) / fl_den))
             u_pred.append(u_from_indoor_face_cloud(pred, prior, points, uc, band=U_FACE_BAND))
             u_true.append(float(batch["u_value"][0]))
             u_clear.append(uc)
@@ -314,6 +399,7 @@ def _eval_model(model, kind: str, val_ds, device: str) -> dict:
     n_params = int(sum(p.numel() for p in model.parameters())) if model is not None else 0
     return {
         "field_rel_l2": float(np.mean(rel_l2s)),
+        "field_rel_l2_fluct": float(np.mean(fluct_rel_l2s)),
         "field_rmse_k": rmse_theta * delta_t_k,
         "field_p95_abs": float(np.percentile(abs_err, 95)),
         "field_max_abs": float(abs_err.max()),
@@ -506,6 +592,13 @@ def main() -> None:
     )
     # Latent queries are shared across the corpus (one fixed latent grid).
     _ = latent_grid_coords(LATENT_GRID)
+
+    # Phase-0 controls: the non-physics prior (delta_const_*) and the predict_mean floor use
+    # a single constant = mean theta over the TRAINING corpus — a fixed scalar carrying no
+    # per-sample or physics information (computed on train only, so it is leak-free).
+    global _CONST_PRIOR
+    _CONST_PRIOR = float(np.mean([float(train_ds[i]["theta"].mean()) for i in range(len(train_ds))]))
+    print(f"[phase0] non-physics constant prior (train-mean theta) = {_CONST_PRIOR:.4f}")
 
     results = []
     for name in a.models:
