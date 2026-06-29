@@ -85,3 +85,10 @@ does the residual structure matter (`cond` vs `delta`); does the *physics* of th
 (`delta_const` vs `delta`); and does any backbone beat `prior_only` on real geometry under the
 mean-removed `field_rel_l2_fluct`. Per-corpus detail: `results/block2_*_phase0.{md,json}`; the
 (now-superseded) 14-model matrix: `results/unified_eval.{md,json}`.
+
+**Interim (lead-backbone read, pointnet2 — full cross-backbone verdict pending).** On *both* realcg
+and hard the operator beats the prior (`correction_rel_l2` 0.88 / **0.36**, scaling with bridge
+severity), the physics of the prior is **essential** (`delta_const` collapses to data-only failure),
+and the residual structure is a **minor** refinement (`cond` ≈ `delta`). This reframes the
+contribution to *physics-prior-conditioning* rather than the residual recipe. Open question: does it
+replicate beyond pointnet2 (transolver/deeponet/gino running). Detail in ADR 0010.

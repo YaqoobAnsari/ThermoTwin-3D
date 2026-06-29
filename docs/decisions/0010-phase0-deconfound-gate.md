@@ -94,3 +94,40 @@ operator into at least one measured-data test (B1).
   `delta` only *matches* `prior_only` on DOE (0.011 vs 0.0075) — the open question B2/Q3 decides.
 - Apparatus committed at `5d0d725`; Phase-0 jobs `26617386` (realcg) / `26617387` (hard) +
   `fem_speedup` running; results land to `results/block2_*_phase0.{json,md}`.
+
+### Interim results — lead-backbone read (pointnet2, seed 1337; full cross-backbone verdict pending)
+
+The strongest backbone's full deconfounded quad is in on both corpora (the slower transolver/gino
+blocks decide cross-backbone generalisation, ~6 h out). `correction_rel_l2` (↓, `prior_only` ≡ 1.0):
+
+| variant | realcg (clear-wall, 4.5% bridge) | hard (severe sub-voxel bridge, 29%) |
+|---|---|---|
+| `predict_mean` (trivial floor) | 24.3 | 7.65 |
+| `pointnet2` (data-only) | 12.65 | 1.15 |
+| `delta_const_pointnet2` (constant prior) | 12.67 | 1.15 |
+| `cond_pointnet2` (prior as input) | 0.916 | 0.371 |
+| `delta_pointnet2` (recipe) | **0.881** | **0.360** |
+
+Three findings, consistent across both corpora:
+1. **Q3 — beats the prior: yes**, and *in proportion to bridge severity* — ~12% better than the
+   zero-param prior on clear-wall realcg, ~64% better on severe-bridge hard. The operator earns its
+   keep where the 1-D prior breaks.
+2. **Q2 — the physics of the prior is essential: confirmed.** Replacing it with a constant
+   (`delta_const`) collapses the model to data-only failure (12.67 ≈ 12.65; 1.15 ≈ 1.15). It is the
+   physics, not "any prior + a network".
+3. **Q1 — the residual *structure* is a minor refinement: confound real.** `cond` (prior as a plain
+   input feature) ≈ `delta` (0.916 vs 0.881; 0.371 vs 0.360). The lever is *conditioning on the
+   physics prior*; the residual add-back buys ~3–4%. (The 1-epoch DOE smoke that showed `cond` ≈
+   data-only was an under-training artefact — at 300 epochs `cond` converges to ≈ `delta`.)
+
+**Reframe this implies:** the defensible contribution is *"conditioning a geometry operator on a
+closed-form physics prior lets it beat the prior on real geometry, scaling with bridge severity; the
+physics is load-bearing and the residual form is a minor design choice"* — not "the residual recipe
+is the magic."
+
+**Speedup (`fem_speedup.json`):** FV solve = 59 ms (coarse) / 28 s (fine grid) vs ~2 ms model infer
+⇒ ~30× to ~1.3×10⁴×; the 10³–10⁴× headline holds for fine-resolution GT.
+
+**Open (decides the fork):** does this replicate on transolver/deeponet/gino, or is "beats the
+prior" pointnet2-specific? The committed full-roster matrix hinted at the latter on real geometry —
+the running blocks settle it.
