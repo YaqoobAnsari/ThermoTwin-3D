@@ -94,6 +94,12 @@ wandb/
 !results/block2_bag_benchmark.md
 !results/unified_eval.json
 !results/unified_eval.md
+!results/block2_realcg_phase0.json
+!results/block2_realcg_phase0.md
+!results/block2_hard_phase0.json
+!results/block2_hard_phase0.md
+!results/phase0/
+!results/phase0/fem_speedup.json
 !results/thermal_sample/
 !results/thermal_sample/summary.json
 !results/thermoscenes/

@@ -4,7 +4,9 @@ Date: 2026-06-29
 
 ## Status
 
-Accepted (gate running; the fork decision is recorded here when Phase-0 lands)
+Accepted — **gate landed 2026-06-30: forward H1 is a null on real geometry → pivot to H2** (the
+inverse twin), using the physics-prior-conditioned operator as a fast forward engine. Full verdict
+at the end of this ADR.
 
 ## Context
 
@@ -131,3 +133,41 @@ is the magic."
 **Open (decides the fork):** does this replicate on transolver/deeponet/gino, or is "beats the
 prior" pointnet2-specific? The committed full-roster matrix hinted at the latter on real geometry —
 the running blocks settle it.
+
+## Verdict (2026-06-30) — forward H1 is a null on real geometry; pivot to H2
+
+Both gate jobs completed (realcg 6h39m, hard 5h50m; 4 backbones × 4 variants + 2 controls × 3
+seeds). `correction_rel_l2` (↓, `prior_only` ≡ 1.000) and the mean-removed `field_rel_l2_fluct`
+(prior is the number to beat):
+
+| | realcg corr | realcg fluct | hard corr | hard fluct |
+|---|---|---|---|---|
+| `prior_only` (zero-param) | 1.000 | 0.036 | 1.000 | 0.136 |
+| `delta_pointnet2` | **0.894** | **0.034** | **0.358** | **0.051** |
+| `delta_transolver` | 1.136 | 0.043 | 0.474 | 0.067 |
+| `delta_deeponet` | 1.003 | 0.037 | 0.948 | 0.129 |
+| `delta_gino` | 1.525 | 0.060 | 0.563 | 0.078 |
+
+1. **On real geometry the operator does not beat the analytic prior in any robust, backbone-general
+   way.** Only `delta_pointnet2` edges it (corr 0.894, ~11%; fluct 0.034 vs 0.036, ~6%); the other
+   three backbones **tie or lose** to the zero-parameter prior (corr 1.14 / 1.00 / 1.53). On the
+   honest mean-removed metric the prior is 0.036 and the *best* operator is 0.034 — a 0.2-point edge,
+   from one backbone, on a 7-building single split whose error bars are init-noise. That is a null.
+2. **The reason is physical, confirmed by the realcg↔hard contrast.** On `hard` (severe sub-voxel
+   bridges) the operator wins decisively (corr 0.36–0.56, fluct 0.05–0.08 vs 0.136). The operator's
+   value scales with bridge severity — and real envelopes are mostly clear wall, where the 1-D prior
+   is near-optimal. Not a fixable bug; a property of the problem.
+3. **Physics-prior-conditioning is real and essential** (`delta_const` collapses to data-only failure
+   on realcg for every backbone) — but "essential to reconstruct the field" ≠ "beats the prior". The
+   prior already reconstructs the field; conditioning lets the network *match* it, not exceed it.
+4. **Speedup holds** (FV 59 ms coarse / 28 s fine vs ~2 ms infer ⇒ ~30×–1.3×10⁴×).
+
+**Fork → pivot to H2 (the inverse twin).** A forward-prediction-beats-baselines paper is not
+supported on real geometry. The honest, publishable assets that survive: (a) a well-characterised
+fast forward *engine* (analytic prior + physics-prior-conditioned correction) for H2; (b) a clean
+boundary result — "a closed-form 1-D prior is near-optimal for real envelope thermal fields; learned
+operators earn their keep only in proportion to bridge severity" — as H2's motivation; (c) the
+physics-prior-conditioning mechanism. H2 (calibrate against measured IR → per-surface U / bridges /
+retrofit) is where geometry-resolution + measured data create the real, defensible contribution, and
+is untouched by this audit. Cross-cutting items still required for H2: run the operator on measured
+data (B1), and the corrected thesis framing (already done).

@@ -1,0 +1,19 @@
+{
+  "note": "FV (finite-volume) per-sample conduction solve time \u2014 the GT generator's cost, the numerator of the speedup vs a learned operator. Divide by a model's infer_ms_per_sample (benchmark JSON) for the speedup. CPU single-thread.",
+  "standard_block": {
+    "n": 32,
+    "ms_mean": 63.37182630704774,
+    "ms_median": 58.79734447808005,
+    "ms_p95": 109.24492323247249,
+    "ms_min": 28.00107595976442,
+    "ms_max": 132.0070709916763
+  },
+  "hard_block": {
+    "n": 32,
+    "ms_mean": 37926.28769531075,
+    "ms_median": 27960.657480492955,
+    "ms_p95": 99710.19093781651,
+    "ms_min": 12797.107980004512,
+    "ms_max": 99981.49424500298
+  }
+}
