@@ -4,6 +4,17 @@ Three roles: **real thermal + geometry** (validation / calibration), **geometry 
 (scan realism + a substrate to generate physics GT over), and **physics ground truth**
 (which we generate — also a release asset).
 
+> **Audit caveats (2026-06-29, [ADR 0010](decisions/0010-phase0-deconfound-gate.md)) — read before
+> citing dataset breadth.** (1) Every *direct* training corpus uses **simulated** per-surface FV
+> conduction GT, not measured fields; the trained operator has **never** been scored against a
+> measured thermal field (the TUM2TWIN/TBBR/Twin-Houses/ThermoScenes rungs currently validate the
+> analytic prior or hand-crafted heuristics, not the network). (2) The "real-CityGML LoD2" and
+> "LoD3" corpora are the **same 27 TUM2TWIN buildings** at two fidelities — one building set, not
+> two datasets. (3) The DOE corpus reads EnergyPlus IDF *constructions* but **does not run
+> EnergyPlus**; its GT is the same FV solve. (4) Effective real-geometry breadth is ~3 correlated
+> sources (Munich + Amsterdam + idealised DOE), one climate — too narrow for a general claim without
+> broader geometry. These are open items, not settled capabilities.
+
 ## Real thermal + geometry (validation + calibration)
 
 | Dataset | What it provides | Role |

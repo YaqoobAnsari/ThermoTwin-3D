@@ -3,6 +3,15 @@
 Four experiment blocks. Each maps to a sub-directory under `experiments/` and composes from
 `configs/experiment/`.
 
+> **Current status (2026-06-29) — H1 forward result is UNDER AUDIT.** A five-angle adversarial
+> audit walked back the "delta-prior beats the prior on real geometry" verdict: on the real corpora
+> the operator only *matches* the zero-parameter analytic prior, the data-only-vs-delta comparison
+> was confounded, the GT is welded to the prior, and the trained model has never been run on
+> measured data. A **Phase-0 decision gate** is running to choose between *rescuing H1* (forward
+> prediction) and *pivoting to H2* (the inverse twin). See
+> **[ADR 0010](decisions/0010-phase0-deconfound-gate.md)** — it supersedes the optimistic reading of
+> the Block-1/2 results below until the gate lands.
+
 ## Block 1 — Controlled synthetic FEM benchmark  (`experiments/block1_synthetic_fem/`)
 **Goal:** establish field accuracy and the speedup headline on a clean, controlled corpus.
 - Train on FEM heat-conduction fields generated over the geometry corpus (`scripts/generate_fem_groundtruth.py`).

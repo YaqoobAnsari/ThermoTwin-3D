@@ -51,29 +51,37 @@ with/without thermal-data assimilation.
 > Reporting rule: always pair an ML metric (relative L2) with a building metric (U-value /
 > heat-loss error) — the venue cares about the latter.
 
-## Results so far (Block-2 / H1) — the verdict
+## Results so far (Block-2 / H1) — status: UNDER AUDIT, decision gate running
 
-Across 6 direct corpora (3 synthetic + real-CityGML LoD2/LoD3 + DOE; **3D-BAG re-running** after a
-walltime-truncated job) × 14 models × 9 metrics, scored over seeds 1337/1/2:
+> A 5-angle adversarial self-audit (2026-06-29; GT/circularity, data-hygiene, metric-fairness,
+> training-fairness, dataset/baseline sufficiency) walked back the earlier "delta beats physics,
+> backbone-agnostically" verdict. See **[ADR 0010](decisions/0010-phase0-deconfound-gate.md)** for
+> the full finding list and the Phase-0 decision gate now running. Read this section as the honest
+> current state, not a settled result.
 
-- **The delta-prior recipe is the decisive, backbone-agnostic factor.** Every data-only operator
-  *fails* on real geometry — field rel-L2 0.22–0.88 and bridge corr-relL2 **3–9** (≫ 1, i.e. *worse*
-  than the analytic prior). Wrap the same backbone in the delta-prior and it snaps to rel-L2
-  **0.015–0.026** and bridge corr-relL2 **< 1** (beats the prior). All six families improve; the
-  recipe — not the architecture — is what makes real as-built geometry work.
-- **`delta_pointnet2` is the best backbone on real geometry — and the smallest (0.17 M).** Wins
-  field rel-L2, field rel-L2@bridge, bridge corr-relL2, and is the *only* model with positive
-  correction R² on real shells (real-CityGML 0.768 bridge corr-relL2; LoD3 0.842; 3D-BAG **0.659**
-  from the truncated log — our strongest real-geometry result).
-- **`delta_meshgraphnet` owns the sharp/sub-voxel-bridge regime** (synthetic-hard sweep; best at the
-  DOE bridges). `delta_transolver`/`delta_gnot` remain strong (beat the prior everywhere) but are no
-  longer the leaders. `fno_voxel` wins only on axis-aligned synthetic-box and collapses on real
-  geometry (bridge corr-relL2 ~4.5).
+**What holds.** The delta-prior recipe *rescues operators from total failure*: every data-only
+operator collapses on real geometry (field rel-L2 0.22–0.88), and the same backbone wrapped in the
+delta-prior reconstructs the field (rel-L2 0.015–0.026). The clean-comparison facts also hold — no
+geometry leakage (by-building splits), leak-free normalisation, faithful (non-strawman) competitor
+backbones.
 
-Honest caveat: on real shells the prior is already near-exact (these envelopes are mostly clear
-wall, U-MAE ~0.002–0.005), so the correction R² is small for everyone — `delta_pointnet2` being the
-only positive one is the meaningful separation. The defensible claim is at the bridges
-(corr-relL2 < 1 = genuinely improves on the prior where geometry matters), not global R².
+**What does NOT hold (the walk-back).**
+- **"Beats the prior on real geometry" is not established.** On the real corpora the *global*
+  `correction_rel_l2` is **≥ 1 for 5 of 6 delta backbones** (they do not beat the zero-parameter
+  prior); only `delta_pointnet2` is < 1, and by ~4%. On DOE, `prior_only` wins field rel-L2 outright.
+  The prior already explains ~98% of the real-geometry field — possibly because real envelopes are
+  mostly clear wall (physics), not a bug to fix.
+- **The data-only vs delta comparison is confounded.** "Delta" changes two things at once — it gains
+  the prior as an extra *input channel* AND a residual *target*. Phase-0 (`cond_*` / `delta_const_*`,
+  see `scripts/benchmark_block2.py`) deconfounds this.
+- **The GT is welded to the prior** (the prior is the FV solver's own per-column integral), the
+  "real geometry" corpora are synthetic per-surface conduction with the cloud rotated into building
+  coords (DOE never runs EnergyPlus), U-MAE is vacuous on the real corpora (prior U-MAE = 0), and the
+  **trained operator is never run on measured data** — the cross-task rungs validate the prior /
+  heuristics, not the network.
 
-One consolidated matrix + coverage map: `results/unified_eval.{md,json}`
-(`scripts/unified_eval.py`); per-corpus detail in `results/block2_*_benchmark.{md,json}`.
+**The gate (ADR 0010).** Phase-0 decides H1-rescue vs pivot-to-H2 on three falsifiable questions:
+does the residual structure matter (`cond` vs `delta`); does the *physics* of the prior matter
+(`delta_const` vs `delta`); and does any backbone beat `prior_only` on real geometry under the
+mean-removed `field_rel_l2_fluct`. Per-corpus detail: `results/block2_*_phase0.{md,json}`; the
+(now-superseded) 14-model matrix: `results/unified_eval.{md,json}`.

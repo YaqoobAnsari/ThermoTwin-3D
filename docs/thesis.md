@@ -19,11 +19,19 @@ shoebox or an RC graph.
    envelope, with boundary conditions (indoor/outdoor temperatures, solar gain, convection
    coefficients), optionally coupled to a zone air-balance node.
 3. **The learner.** A geometry-conditioned neural operator that maps
-   *(geometry, material properties, boundary conditions) → temperature/heat-flux field*,
-   with the heat equation enforced in the loss. **GINO** is the natural backbone: it encodes
-   an irregular point cloud plus SDF features through a graph neural operator onto a latent
-   grid, applies Fourier layers, and decodes back onto arbitrary query points — i.e. it
-   already speaks "point cloud + SDF," which is exactly our scan output.
+   *(geometry, material properties, boundary conditions) → temperature/heat-flux field*.
+   **GINO** is a natural backbone: it encodes an irregular point cloud plus SDF features through a
+   graph neural operator onto a latent grid, applies Fourier layers, and decodes back onto arbitrary
+   query points — i.e. it already speaks "point cloud + SDF," which is exactly our scan output.
+
+   > **Correction (2026-06-29, per [ADR 0010](decisions/0010-phase0-deconfound-gate.md)).** The
+   > original phrasing "with the heat equation enforced in the loss" is **not** what carries the
+   > result. The PDE-residual loss was empirically dead (it lost to plain training in Block-1) and is
+   > used in *no* Block-2 run. The mechanism that works is **delta learning on a closed-form analytic
+   > 1-D conduction prior** — predict the geometry-coupled *correction* on the prior, not the field
+   > from scratch. The forward operator's value over the prior alone is currently under audit (the
+   > prior is near-optimal on real envelopes); see ADR 0010. Frame H1 as the hybrid analytic+
+   > correction surrogate, not as physics-in-the-loss.
 4. **Calibration / inverse.** Assimilate measured thermal data (thermal point clouds, UAV IR)
    to infer *spatially varying* envelope properties (per-surface U-value, thermal-bridge
    conductance), turning today's descriptive thermal maps into a predictive, calibrated twin.

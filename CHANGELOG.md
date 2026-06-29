@@ -6,6 +6,24 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+- **Adversarial audit walks back the H1 verdict; a Phase-0 deconfound gate now decides
+  H1-rescue vs H2-pivot.** A five-angle self-audit (GT/circularity, data-hygiene, metric-fairness,
+  training-fairness, dataset/baseline sufficiency) found the "delta-prior beats the prior on real
+  geometry, backbone-agnostically" claim is **not** supported: on the real corpora 5/6 delta
+  backbones do not beat the zero-parameter prior (only `delta_pointnet2`, by ~4%); the data-only-vs-
+  delta comparison is confounded (delta gains the prior as an extra *input channel* AND a residual
+  target); the GT is welded to the prior; U-MAE is vacuous on the real corpora; and the trained
+  operator is **never** run on measured data. Cleared, in our favour: no geometry leakage (by-
+  building splits), leak-free normalisation, faithful (non-strawman) baselines. New
+  `scripts/benchmark_block2.py` ablation families — `cond_<bb>` (prior-as-input, full-field target),
+  `delta_const_<bb>` (delta on a non-physics constant prior), `predict_mean`, and the mean-removed
+  `field_rel_l2_fluct` metric — plus `scripts/fem_speedup.py` (the missing FV-solve speedup
+  denominator) and `scripts/slurm/block2_phase0.slurm`. Full finding list, decision criteria, and
+  the fork in **[ADR 0010](docs/decisions/0010-phase0-deconfound-gate.md)**. `docs/baselines.md`,
+  `docs/experiment-plan.md`, `docs/datasets.md`, and `docs/thesis.md` (the dead "physics-in-the-loss"
+  claim) are corrected to the audited state; the earlier `unified_eval` verdict is marked superseded.
+
 ### Added
 - **Full 14-model × 6-corpus matrix landed — H1 verdict, and the lead model changed.** With the
   expanded roster run to completion on 6 of 7 corpora (3 synthetic + real-CityGML LoD2/LoD3 + DOE;
