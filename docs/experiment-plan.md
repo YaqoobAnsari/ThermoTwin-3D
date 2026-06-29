@@ -3,14 +3,16 @@
 Four experiment blocks. Each maps to a sub-directory under `experiments/` and composes from
 `configs/experiment/`.
 
-> **Current status (2026-06-29) — H1 forward result is UNDER AUDIT.** A five-angle adversarial
-> audit walked back the "delta-prior beats the prior on real geometry" verdict: on the real corpora
-> the operator only *matches* the zero-parameter analytic prior, the data-only-vs-delta comparison
-> was confounded, the GT is welded to the prior, and the trained model has never been run on
-> measured data. A **Phase-0 decision gate** is running to choose between *rescuing H1* (forward
-> prediction) and *pivoting to H2* (the inverse twin). See
-> **[ADR 0010](decisions/0010-phase0-deconfound-gate.md)** — it supersedes the optimistic reading of
-> the Block-1/2 results below until the gate lands.
+> **Current status (2026-06-30) — pivoted to the SYSTEM; target Automation in Construction.**
+> The forward gate (ADR 0010) confirmed the analytic prior is near-optimal on real clear-wall
+> envelopes — the forward operator is the *engine*, not the contribution. A three-agent adversarial
+> novelty re-scan confirmed there is **no defensible residual-mechanism novelty** (every leg is
+> 2025–26 prior art; ~5/10 for ML), but the **end-to-end system is unoccupied (~8/10 for AiC)**: the
+> scan→thermal-field and inverse-thermography rails have never been joined on as-built envelopes.
+> **The contribution is the geometry-resolved inverse twin** — see
+> **[ADR 0011](decisions/0011-aic-system-contribution.md)** (supersedes ADR 0010's open fork).
+> First inverse-twin results are in (`results/inverse_*.json`); a boundary-layer A/B ablation
+> (`results/bl_*.json`) is the method-section evidence.
 
 ## Block 1 — Controlled synthetic FEM benchmark  (`experiments/block1_synthetic_fem/`)
 **Goal:** establish field accuracy and the speedup headline on a clean, controlled corpus.
