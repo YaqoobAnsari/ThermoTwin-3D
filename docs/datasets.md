@@ -15,6 +15,36 @@ Three roles: **real thermal + geometry** (validation / calibration), **geometry 
 > sources (Munich + Amsterdam + idealised DOE), one climate — too narrow for a general claim without
 > broader geometry. These are open items, not settled capabilities.
 
+## External dataset spike (2026-06-30) — can we *find* bridge-field data, or must we build it?
+
+A three-angle web spike (building bridge-field data · measured 3-D thermal · SciML
+conduction-with-inclusions) settled the data question behind the H1 thermal-bridge story.
+**No turnkey dataset gives building-bridge geometry + temperature/flux fields + BCs + materials.**
+The credible options:
+
+- **SciML conduction-with-inclusions — the methods-test data (borrowed, published, no collection).**
+  A thermal bridge is mathematically a high-conductivity inclusion in a matrix; these benchmarks are
+  exactly that with forward field GT, and our Phase-0 deconfound harness transfers directly
+  (homogenised effective-medium prior ↔ our analytic 1-D prior). **WHNO** (arXiv 2511.07347 —
+  rect/disk/Voronoi inclusions, code+generator), **EIT three-phase** (arXiv 2511.20361 — 100×
+  contrast, 10k @256², needs a forward-solve adaptation), **Darcy flow** (FNO/PDEBench — off-the-
+  shelf, ~2–4× contrast). *Non-building → these support a methods claim, not a building-physics
+  claim.* Fetched to `data/raw/external/` via `scripts/download_external_datasets.sh`.
+- **Building bridge fields — regenerate, don't download.** No open corpus exists. The defensible
+  path: real junction geometry + BCs + materials from **EUROKOBRA** (~1000 2-D details) / national
+  catalogues (UK ACD, Kingspan, Passivhaus), dense fields regenerated with a **validated free solver
+  (THERM / HEAT2)**, each case anchored to **ISO 10211** reference values (4 validated cases — the
+  physics-validation anchor; A.3/A.4 are 3-D bridges). This is "physically-validated synthetic from
+  real geometry" — defensible where the current painted-prism GT is not. Mostly 2-D.
+- **New measured assets (for H2 / calibration).** **Dublin U-value** (Mendeley 10.17632/4kbb93bx32.1
+  — heat flux + both BCs + ISO-9869 U-values, 0-D; a clean addition to Twin Houses); IRIS (Zenodo,
+  weather-forced facade LWIR, no geometry); TSDN (mesh + diurnal thermal, no BCs). **TBBR remains the
+  only bridge-annotated set** (2-D detection, no fields).
+
+Implication: the bridge story's first test is the **borrowed SciML benchmarks** (no data collection);
+a *building-physics* claim additionally needs the EUROKOBRA + THERM + ISO-10211 regeneration. See
+[ADR 0010](decisions/0010-phase0-deconfound-gate.md).
+
 ## Real thermal + geometry (validation + calibration)
 
 | Dataset | What it provides | Role |
