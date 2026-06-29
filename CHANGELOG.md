@@ -7,6 +7,24 @@ the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Full 14-model × 6-corpus matrix landed — H1 verdict, and the lead model changed.** With the
+  expanded roster run to completion on 6 of 7 corpora (3 synthetic + real-CityGML LoD2/LoD3 + DOE;
+  **3D-BAG re-running** after the first job hit its 20 h walltime mid-roster — the benchmark writes
+  its JSON only at the end, so the truncated run produced no file, though its log already shows the
+  wins hold), the consolidated `results/unified_eval.{md,json}` settles three things. (1) **The
+  delta-prior recipe is the decisive, backbone-agnostic factor:** every *data-only* operator fails
+  on real geometry (field rel-L2 0.22–0.88, bridge corr-relL2 3–9 ≫ 1, i.e. worse than the analytic
+  prior), and the *same* backbone wrapped in the delta-prior snaps to rel-L2 0.015–0.026 and bridge
+  corr-relL2 < 1 — for all six families. (2) **`delta_pointnet2` is the new lead on real geometry
+  and the smallest model (0.17 M):** best field / field@bridge / bridge corr-relL2 and the only
+  positive correction-R² on real shells (real-CityGML 0.768; LoD3 0.842; 3D-BAG 0.659 from the
+  truncated log). (3) **`delta_meshgraphnet` owns the sharp-bridge regime** (synthetic-hard,
+  DOE bridges); `delta_transolver`/`delta_gnot` stay strong but are no longer #1; `fno_voxel` wins
+  only on axis-aligned geometry. Verdict written up in `docs/baselines.md`; the question "is there a
+  great model we missed?" is answered — the winner emerged from inside our own delta family.
+- **gitignore: whitelist the LoD3 benchmark outputs.** `results/block2_realcg_lod3_benchmark.{json,md}`
+  were caught by the default `results/*` ignore and silently excluded; now explicitly tracked
+  alongside the other per-corpus benchmarks.
 - **Competitor field widened to all four operator families + a holistic metric suite.** To be sure
   `delta_transolver` isn't winning only because stronger architectures were absent, the bake-off
   roster grows from 6 → **14 models**: added self-contained gridless implementations of **GNOT**
