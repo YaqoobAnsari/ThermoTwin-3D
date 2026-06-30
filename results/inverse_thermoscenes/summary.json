@@ -1,0 +1,59 @@
+{
+  "archive": "/data/gpfs/projects/punim2769/ThermoTwin-3D/data/raw/thermoscenes/ThermoScenes_full.zip",
+  "config": {
+    "archive": "/data/gpfs/projects/punim2769/ThermoTwin-3D/data/raw/thermoscenes/ThermoScenes_full.zip",
+    "scenes": [
+      "BI-building",
+      "exhibition_building",
+      "INR-building"
+    ],
+    "knn": 8,
+    "diffuse": 3,
+    "baseline_k": 40,
+    "steps": 400,
+    "lr": 0.05,
+    "l1": 0.005,
+    "l2": 0.001,
+    "tv": 0.005,
+    "ensemble": 5,
+    "seed": 1337,
+    "no_figures": false
+  },
+  "scenes": {
+    "BI-building": {
+      "n_points": 1620,
+      "measured_std_C": 0.66,
+      "detector_anomaly_frac": 0.0216,
+      "data_fit_rel_l2": 0.757,
+      "overlap_precision": 0.171,
+      "overlap_recall": 0.171,
+      "overlap_iou": 0.094,
+      "overlap_iou_random_null": 0.0216,
+      "overlap_iou_lift_over_null": 4.3,
+      "ensemble_mask_stability_iou": 1.0,
+      "recon_correction_rel_l2": 0.757,
+      "recon_correction_corr": 0.654
+    },
+    "INR-building": {
+      "n_points": 13785,
+      "measured_std_C": 2.763,
+      "detector_anomaly_frac": 0.0263,
+      "data_fit_rel_l2": 0.719,
+      "overlap_precision": 0.325,
+      "overlap_recall": 0.325,
+      "overlap_iou": 0.194,
+      "overlap_iou_random_null": 0.0263,
+      "overlap_iou_lift_over_null": 7.4,
+      "ensemble_mask_stability_iou": 0.984,
+      "recon_correction_rel_l2": 0.719,
+      "recon_correction_corr": 0.697
+    }
+  },
+  "aggregate": {
+    "n_scenes": 2,
+    "mean_overlap_iou": 0.144,
+    "mean_iou_lift_over_null": 5.8,
+    "mean_data_fit_rel_l2": 0.738,
+    "mean_stability_iou": 0.992
+  }
+}
