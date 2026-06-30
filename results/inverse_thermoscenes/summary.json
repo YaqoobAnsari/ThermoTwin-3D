@@ -4,8 +4,14 @@
     "archive": "/data/gpfs/projects/punim2769/ThermoTwin-3D/data/raw/thermoscenes/ThermoScenes_full.zip",
     "scenes": [
       "BI-building",
+      "buildingA_spring",
+      "buildingA_winter",
+      "building-sunrise",
+      "dorm1",
+      "dorm2",
       "exhibition_building",
-      "INR-building"
+      "INR-building",
+      "MED-building"
     ],
     "knn": 8,
     "diffuse": 3,
@@ -34,6 +40,62 @@
       "recon_correction_rel_l2": 0.757,
       "recon_correction_corr": 0.654
     },
+    "buildingA_spring": {
+      "n_points": 4480,
+      "measured_std_C": 4.176,
+      "detector_anomaly_frac": 0.0085,
+      "data_fit_rel_l2": 0.828,
+      "overlap_precision": 0.263,
+      "overlap_recall": 0.263,
+      "overlap_iou": 0.152,
+      "overlap_iou_random_null": 0.0085,
+      "overlap_iou_lift_over_null": 17.9,
+      "ensemble_mask_stability_iou": 0.964,
+      "recon_correction_rel_l2": 0.828,
+      "recon_correction_corr": 0.563
+    },
+    "building-sunrise": {
+      "n_points": 997,
+      "measured_std_C": 0.861,
+      "detector_anomaly_frac": 0.007,
+      "data_fit_rel_l2": 0.818,
+      "overlap_precision": 0.0,
+      "overlap_recall": 0.0,
+      "overlap_iou": 0.0,
+      "overlap_iou_random_null": 0.007,
+      "overlap_iou_lift_over_null": 0.0,
+      "ensemble_mask_stability_iou": 0.666,
+      "recon_correction_rel_l2": 0.818,
+      "recon_correction_corr": 0.574
+    },
+    "dorm1": {
+      "n_points": 5417,
+      "measured_std_C": 1.594,
+      "detector_anomaly_frac": 0.0116,
+      "data_fit_rel_l2": 0.755,
+      "overlap_precision": 0.159,
+      "overlap_recall": 0.159,
+      "overlap_iou": 0.086,
+      "overlap_iou_random_null": 0.0116,
+      "overlap_iou_lift_over_null": 7.4,
+      "ensemble_mask_stability_iou": 0.957,
+      "recon_correction_rel_l2": 0.755,
+      "recon_correction_corr": 0.657
+    },
+    "dorm2": {
+      "n_points": 4926,
+      "measured_std_C": 0.912,
+      "detector_anomaly_frac": 0.0258,
+      "data_fit_rel_l2": 0.816,
+      "overlap_precision": 0.297,
+      "overlap_recall": 0.299,
+      "overlap_iou": 0.175,
+      "overlap_iou_random_null": 0.0258,
+      "overlap_iou_lift_over_null": 6.8,
+      "ensemble_mask_stability_iou": 0.968,
+      "recon_correction_rel_l2": 0.816,
+      "recon_correction_corr": 0.582
+    },
     "INR-building": {
       "n_points": 13785,
       "measured_std_C": 2.763,
@@ -47,13 +109,27 @@
       "ensemble_mask_stability_iou": 0.984,
       "recon_correction_rel_l2": 0.719,
       "recon_correction_corr": 0.697
+    },
+    "MED-building": {
+      "n_points": 5266,
+      "measured_std_C": 1.715,
+      "detector_anomaly_frac": 0.0272,
+      "data_fit_rel_l2": 0.858,
+      "overlap_precision": 0.133,
+      "overlap_recall": 0.133,
+      "overlap_iou": 0.071,
+      "overlap_iou_random_null": 0.0272,
+      "overlap_iou_lift_over_null": 2.6,
+      "ensemble_mask_stability_iou": 0.983,
+      "recon_correction_rel_l2": 0.858,
+      "recon_correction_corr": 0.517
     }
   },
   "aggregate": {
-    "n_scenes": 2,
-    "mean_overlap_iou": 0.144,
-    "mean_iou_lift_over_null": 5.8,
-    "mean_data_fit_rel_l2": 0.738,
-    "mean_stability_iou": 0.992
+    "n_scenes": 7,
+    "mean_overlap_iou": 0.11,
+    "mean_iou_lift_over_null": 6.6,
+    "mean_data_fit_rel_l2": 0.793,
+    "mean_stability_iou": 0.932
   }
 }
