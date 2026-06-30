@@ -290,13 +290,15 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Five results, each a building block of the twin}
-  \begin{enumerate}
+\begin{frame}{Our results, each a building block of the twin}
+  \begin{enumerate}\small
     \item \win{The physics-residual recipe} makes \emph{every} geometry operator work on real scans.
     \item \win{A comprehensive benchmark} maps exactly \emph{where} learning adds value.
     \item \win{The inverse twin} reads thermal bridges and U-values back out of the field.
     \item \win{Calibrated uncertainty} makes every estimate trustworthy.
     \item \win{Measured-data validation} corroborates the whole chain.
+    \item[6--8.] \win{Three hardening experiments} close the pre-registered limitations:
+          ground-truth credibility (ISO 10211), the measured-field inverse, and identifiability.
   \end{enumerate}
 \end{frame}
 
@@ -429,6 +431,43 @@
   \end{block}
 \end{frame}
 
+\begin{frame}{Result 6: ground-truth credibility (independent solver $+$ ISO 10211)}
+  An \textbf{independent general-boundary conduction solver} (a separate implementation) anchors
+  the simulated GT: it \win{passes ISO 10211} and cross-validates our production engine to
+  \win{machine precision} (field rel-L2 $\sim$$10^{-15}$). Shown: the 2-D metal thermal-bridge case.
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.82\textwidth]{figs/iso10211_case2.png}
+  \end{figure}
+  \centerline{\footnotesize All nine ISO reference temperatures within \win{$0.039\unit{K}$};
+    heat flow within \win{$0.009\unit{W/m}$} (the standard allows $0.1$).}
+\end{frame}
+
+\begin{frame}{Result 7: the inverse twin runs on a measured 3-D field}
+  \vspace{-0.4em}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.66\textwidth]{figs/thermoscenes_inverse.png}
+  \end{figure}
+  \vspace{-0.6em}
+  \centerline{\footnotesize The inverse, \emph{unchanged} from the synthetic setting, runs end-to-end on
+    measured ThermoScenes fields. Recovered sources overlap}
+  \centerline{\footnotesize an \emph{independent} detector at \win{$\sim$$5.8\times$} chance across 7
+    facades (stability $\sim$$0.99$): a convergent validation on real data.}
+\end{frame}
+
+\begin{frame}{Result 8: identifiability, quantified}
+  \vspace{-0.4em}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.74\textwidth]{figs/identifiability_hard.png}
+  \end{figure}
+  \vspace{-0.6em}
+  \centerline{\footnotesize With known truth on a severe-bridge corpus: \win{integrals recover}
+    (U-MAE $\sim$$0.045\unit{W/m^2K}$), the \win{point field does not} (rel-L2 $>1$),}
+  \centerline{\footnotesize error is lowest near the observed surface, and the uncertainty tracks the error.}
+\end{frame}
+
 % ================================================================ PART IV
 \section{Contribution and close}
 
@@ -451,19 +490,23 @@
   \centerline{\textbf{Target venue: \emph{Automation in Construction}} (a construction-automation contribution).}
 \end{frame}
 
-\begin{frame}{Honest limitations and next steps}
-  \begin{itemize}
-    \item \textbf{Ground-truth credibility.} Our bridge fields are simulated; next is validating them
-          against an independent solver and the ISO-10211 thermal-bridge benchmark cases.
-    \item \textbf{Measured-field inverse.} We validate \emph{U-values} on measured data today; running the
-          inverse on a fully measured 3-D thermal field is the headline experiment to close.
-    \item \textbf{Identifiability.} Surface IR under-determines interior properties; U-values and $\Psi$
-          (integrated quantities) are what is recoverable, and our uncertainty honestly reflects the rest.
+\begin{frame}{The three honest limitations, now addressed}
+  We pre-registered three boundaries. Each is now an \emph{experiment}, not an assumption.
+  \begin{itemize}\small
+    \item \textbf{Ground-truth credibility.} An independent solver \win{passes ISO 10211} (Case 1
+          analytical, Case 2 metal thermal bridge) and matches our engine to \win{machine precision}.
+          The simulated bridge GT is credible (Result 6).
+    \item \textbf{Measured-field inverse.} The inverse now runs end-to-end on \win{fully measured 3-D
+          fields}; recovered heat loss agrees with an independent detector at $\sim$$5.8\times$ chance
+          across 7 facades (Result 7).
+    \item \textbf{Identifiability.} Quantified, not asserted: \win{integrals (U, $\Psi$) recover, the
+          full field does not}, and the calibrated uncertainty tracks the residual non-uniqueness
+          (Result 8).
   \end{itemize}
-  \vspace{0.3em}
-  \begin{block}{Roadmap to the paper}
-    Credible bridge GT, then measured-field inverse, then a retrofit what-if demonstration,
-    then the \emph{Automation in Construction} submission.
+  \vspace{0.2em}
+  \begin{block}{What remains for the paper}
+    The 3-D ISO cases (corner, iron bar) and a retrofit what-if demonstration, then the
+    \emph{Automation in Construction} submission.
   \end{block}
 \end{frame}
 
