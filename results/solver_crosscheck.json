@@ -1,0 +1,9 @@
+{
+  "n_cases": 12,
+  "field_rel_l2_max": 3.209672537660105e-15,
+  "field_rel_l2_mean": 5.03529696673304e-16,
+  "u_rel_err_max": 7.41423119008717e-14,
+  "tol": 1e-06,
+  "pass": true,
+  "note": "production vs independent reference solver on generated corpus cases (axis-0 BCs)"
+}

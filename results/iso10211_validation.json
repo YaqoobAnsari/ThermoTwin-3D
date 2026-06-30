@@ -1,0 +1,15 @@
+{
+  "case": "ISO 10211 A.1 (conduction method validation)",
+  "grid": [
+    160,
+    320
+  ],
+  "tol_K": 0.1,
+  "max_err_K": 0.4385538081711262,
+  "max_err_away_from_corner_K": 0.01034619757888322,
+  "p99_err_K": 0.0010453835598798595,
+  "mean_err_K": 0.00011783500427084933,
+  "corner_note": "singularity at (0,8); ISO scores at 1 m grid points and away from it",
+  "pass": true,
+  "a2_a4": "deferred: material thermal-bridge cases need the standard's exact figures"
+}
