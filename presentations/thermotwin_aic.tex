@@ -1,4 +1,4 @@
-% ThermoTwin-3D --- progress presentation (Automation in Construction framing)
+% ThermoTwin-3D : progress presentation (Automation in Construction framing)
 % Compile with:  pdflatex thermotwin_aic.tex   (run twice). Figures live in ./figs/.
 % Standard packages only (beamer, booktabs, graphicx, tikz, amssymb).
 \documentclass[aspectratio=169]{beamer}
@@ -27,7 +27,7 @@
 \begin{frame}[plain]
   \titlepage
   \begin{center}\small
-    Forward prediction of the envelope thermal field \;$+$\; inverse recovery of
+    Forward prediction of the envelope thermal field, plus inverse recovery of
     U-values and thermal bridges from measured infrared.
   \end{center}
 \end{frame}
@@ -36,25 +36,25 @@
   \small
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
-      \textbf{Part I --- Framing}
+      \textbf{Part I: Framing}
       \begin{enumerate}
         \item The problem: envelopes leak, invisibly.
-        \item How the field models this today (and the trade-offs).
+        \item How the field models this today, and the trade-offs.
         \item The research gap.
       \end{enumerate}
-      \textbf{Part II --- Our approach}
+      \textbf{Part II: Our approach}
       \begin{enumerate}\setcounter{enumi}{3}
         \item The pipeline; inputs and outputs.
-        \item \emph{The recipe}, explained and visualized.
+        \item The recipe, explained and visualized.
       \end{enumerate}
     \end{column}
     \begin{column}{0.5\textwidth}
-      \textbf{Part III --- Evidence}
+      \textbf{Part III: Evidence}
       \begin{enumerate}\setcounter{enumi}{5}
         \item Datasets and metrics.
-        \item Five results --- each a building block of the twin.
+        \item Five results, each a building block of the twin.
       \end{enumerate}
-      \textbf{Part IV --- Close}
+      \textbf{Part IV: Close}
       \begin{enumerate}\setcounter{enumi}{7}
         \item Contribution, limitations, roadmap.
       \end{enumerate}
@@ -68,13 +68,13 @@
 \begin{frame}{The problem: envelopes leak, and we cannot see where}
   \begin{itemize}
     \item Building \textbf{envelopes} (walls, roofs, junctions) drive a large share of heating and
-          cooling demand. The biggest, least-understood losses are \textbf{thermal bridges} ---
-          balcony slabs, concrete corners, steel studs that short-circuit the insulation.
+          cooling demand. The biggest, least-understood losses are \textbf{thermal bridges}:
+          balcony slabs, concrete corners, and steel studs that short-circuit the insulation.
     \item Today's practical tools sit at two unsatisfying extremes:
       \begin{itemize}
-        \item \emph{Geometry-blind} --- the standard 1-D U-value calculation treats every wall as a
+        \item \emph{Geometry-blind.} The standard 1-D U-value calculation treats every wall as a
               flat slab. It cannot see a bridge.
-        \item \emph{Qualitative} --- a manual infrared (IR) survey shows \emph{where} it is warm, but
+        \item \emph{Qualitative.} A manual infrared (IR) survey shows \emph{where} it is warm, but
               not \emph{how much} heat is lost, or \emph{what} the U-value is.
       \end{itemize}
     \item Meanwhile, \textbf{as-built 3-D scans} (point clouds, CityGML, photogrammetry) are now
@@ -88,15 +88,15 @@
   \begin{itemize}
     \item \textbf{RC / lumped (``gray-box'') models.} Represent the building as a circuit of thermal
           resistances and capacitances. The workhorse for whole-building energy and controls.
-          \emph{But} each wall is collapsed to a single node --- \bad{no geometry, no bridges} --- and
+          \emph{But} each wall is collapsed to a single node (\bad{no geometry, no bridges}), and
           they need calibration.
     \item \textbf{Physics simulators (FEM / CFD / EnergyPlus).} Solve the heat equation on a mesh.
-          The accurate, geometry-resolved \emph{gold standard}. \emph{But} \bad{slow} (seconds to
-          minutes per solve), need a clean mesh and full material/boundary specification, and do not
-          scale to city-level or interactive use.
+          The accurate, geometry-resolved \emph{gold standard}. \emph{But} they are \bad{slow}
+          (seconds to minutes per solve), need a clean mesh and full material / boundary
+          specification, and do not scale to city-level or interactive use.
     \item \textbf{Data-driven surrogates (neural operators, PINNs).} Learn a fast approximation of the
           simulation, optionally conditioned on geometry. \emph{Fast and scalable}, \emph{but}
-          \bad{black-box}, data-hungry, and --- as we will show --- they \bad{fail on real as-built
+          \bad{black-box}, data-hungry, and (as we will show) they \bad{fail on real as-built
           geometry} unless anchored on physics.
   \end{itemize}
 \end{frame}
@@ -125,15 +125,15 @@
 \begin{frame}{The research gap}
   Two mature but \textbf{separate} research streams:
   \begin{itemize}
-    \item \textbf{Forward stream} --- geometry-conditioned neural operators that predict physical
+    \item \textbf{Forward stream:} geometry-conditioned neural operators that predict physical
           \emph{fields} on complex geometry (fast surrogates for simulation).
-    \item \textbf{Inverse stream} --- inverse thermography that recovers material \emph{properties}
+    \item \textbf{Inverse stream:} inverse thermography that recovers material \emph{properties}
           (U-values, $\Psi$) from a surface temperature image.
   \end{itemize}
   \vspace{0.4em}
   \begin{alertblock}{The gap}
     Neither stream has been joined \emph{on real as-built 3-D building envelopes}. There is no
-    end-to-end, geometry-resolved neural thermal twin that goes scan $\to$ field $\to$ inverse
+    end-to-end, geometry-resolved neural thermal twin that goes scan to field to inverse
     recovery of U-values and bridges. \textbf{Closing that loop is our contribution.}
   \end{alertblock}
 \end{frame}
@@ -145,12 +145,12 @@
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
       \textbf{Forward (prediction)}\\[2pt]
-      Real envelope geometry $+$ materials $\Rightarrow$ the temperature / heat-flux \textbf{field}
-      $\theta$ over the whole surface --- in milliseconds.
+      Real envelope geometry plus materials give the temperature / heat-flux \textbf{field}
+      $\theta$ over the whole surface, in milliseconds.
     \end{column}
     \begin{column}{0.5\textwidth}
       \textbf{Inverse (diagnosis)}\\[2pt]
-      A \textbf{measured IR field} $\Rightarrow$ \textbf{per-surface U-values} and \textbf{localized
+      A \textbf{measured IR field} gives \textbf{per-surface U-values} and \textbf{localized
       thermal-bridge conductances}, with \textbf{calibrated uncertainty} on every estimate.
     \end{column}
   \end{columns}
@@ -188,8 +188,8 @@
       \textbf{Input:} an observed temperature field (e.g.\ calibrated IR) on known geometry.\\[3pt]
       \textbf{Outputs:}
       \begin{itemize}\footnotesize
-        \item the per-point conductivity field $\Rightarrow$ \textbf{thermal-bridge map};
-        \item \textbf{per-surface U-value} (W/m$^2$K);
+        \item the per-point conductivity field, giving a \textbf{thermal-bridge map};
+        \item the \textbf{per-surface U-value} (W/m$^2$K);
         \item a \textbf{calibrated uncertainty} on each.
       \end{itemize}
     \end{column}
@@ -205,30 +205,30 @@
   parts:
   \begin{enumerate}
     \item \textbf{An analytic physics prior.} For every point we compute, in closed form, the
-          temperature a \emph{flat clear wall} of those materials would have --- the textbook 1-D
-          conduction / U-value field, $\theta_{\text{prior}}$. Zero cost, exact away from bridges.
-    \item \textbf{A geometry-conditioned operator} (e.g.\ a point/graph/transformer neural operator)
-          that ingests the scanned point cloud, the SDF, and the per-point features.
+          temperature a \emph{flat clear wall} of those materials would have: the textbook 1-D
+          conduction / U-value field, $\theta_{\text{prior}}$. Zero cost, and exact away from bridges.
+    \item \textbf{A geometry-conditioned operator} (e.g.\ a point, graph, or transformer neural
+          operator) that ingests the scanned point cloud, the SDF, and the per-point features.
     \item \textbf{A correction, added back.} The operator predicts only the \emph{residual}
           $\Delta\theta$ that the prior misses; the prediction is
           $\;\hat\theta = \theta_{\text{prior}} + \Delta\theta$.
   \end{enumerate}
   \vspace{0.3em}
   \begin{block}{In words}
-    Let physics do the easy 90\%; let the network learn only the hard, geometry-coupled 10\% --- the
+    Let physics do the easy 90\%; let the network learn only the hard, geometry-coupled 10\%: the
     bridges.
   \end{block}
 \end{frame}
 
-\begin{frame}{The recipe (2/2): why it works --- made visible}
+\begin{frame}{The recipe (2/2): why it works, made visible}
   \begin{center}
     \includegraphics[width=\textwidth]{figs/recipe-decomposition.png}
   \end{center}
   \vspace{-0.2em}
   \small
-  The true field (c) is almost identical to the analytic prior (b) --- the prior already captures the
-  smooth through-wall gradient. The only difference is the \textbf{residual} (d): a thin, localized
-  hot-spot --- \emph{the thermal bridge}. \win{That residual is all the network has to learn},
+  The true field (c) is almost identical to the analytic prior (b): the prior already captures the
+  smooth through-wall gradient. The only difference is the \textbf{residual} (d), a thin, localized
+  hot-spot, which is \emph{the thermal bridge}. \win{That residual is all the network has to learn},
   so its entire capacity goes to the part physics cannot do.
 \end{frame}
 
@@ -257,8 +257,8 @@
   \vspace{0.5em}
   \begin{itemize}\footnotesize
     \item Direct corpora carry \emph{simulated} ground-truth fields (we generate them); the measured
-          datasets are the independent reality check. \textbf{Seven direct corpora $\times$ many models
-          $\times$ nine metrics.}
+          datasets are the independent reality check. \textbf{Seven direct corpora, many models,
+          nine metrics.}
   \end{itemize}
 \end{frame}
 
@@ -266,12 +266,12 @@
   \small
   \begin{itemize}
     \item \textbf{Field accuracy.} \emph{Relative-$L_2$} $= \lVert\hat\theta-\theta\rVert/\lVert\theta\rVert$,
-          the standard operator-learning error; and \emph{physical RMSE} in kelvin --- what a
+          the standard operator-learning error; and \emph{physical RMSE} in kelvin, which is what a
           practitioner actually reads.
     \item \textbf{U-value error (the building headline).} Per-surface U-MAE in W/m$^2$K against the
-          documented / true value.
+          documented or true value.
     \item \textbf{Thermal-bridge localization.} \emph{Precision} (of the points we flag as bridge, how
-          many truly are), \emph{recall} (of the true bridges, how many we catch), \emph{IoU}
+          many truly are), \emph{recall} (of the true bridges, how many we catch), and \emph{IoU}
           (overlap of predicted and true bridge regions).
     \item \textbf{Bridge-focused ``correction rel-$L_2$''.} Normalized so the \emph{analytic prior
           scores exactly $1.0$}. We need this because the smooth bulk dominates raw field error and
@@ -279,11 +279,11 @@
           \emph{at the bridges}.
     \item \textbf{Uncertainty calibration.} Does the predicted $\pm1\sigma$ band actually contain the
           truth $\approx68\%$ of the time? Is the model more uncertain where it is more wrong?
-    \item \textbf{Efficiency.} Inference time vs a finite-volume solve.
+    \item \textbf{Efficiency.} Inference time versus a finite-volume solve.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Five results --- each a building block of the twin}
+\begin{frame}{Five results, each a building block of the twin}
   \begin{enumerate}
     \item \win{The physics-residual recipe} makes \emph{every} geometry operator work on real scans.
     \item \win{A comprehensive benchmark} maps exactly \emph{where} learning adds value.
@@ -293,7 +293,7 @@
   \end{enumerate}
 \end{frame}
 
-\begin{frame}{Result 1 --- the recipe rescues \emph{every} architecture}
+\begin{frame}{Result 1: the recipe rescues \emph{every} architecture}
   We tested \textbf{six architecturally distinct} neural-operator families (transformer, linear-attention
   transformer, graph operator, branch/trunk, point network, mesh GNN), each \emph{with} and
   \emph{without} the recipe, on real-CityGML geometry.
@@ -317,17 +317,17 @@
   \end{column}
   \begin{column}{0.38\textwidth}\scriptsize
     \textbf{Baseline:} the operator alone.\\[2pt]
-    \textbf{Standard (the bar):} the analytic 1-D prior $=0.015$ --- what an engineer computes today.\\[4pt]
-    \bad{Alone: $15$--$50\times$ \emph{worse}} than the standard --- unusable.\\[3pt]
-    \win{$+$ recipe: every family snaps to $\approx$ the standard} ($0.015$--$0.025$) --- across all six.
+    \textbf{Standard (the bar):} the analytic 1-D prior $=0.015$, what an engineer computes today.\\[4pt]
+    \bad{Alone: $15$--$50\times$ \emph{worse}} than the standard, i.e.\ unusable.\\[3pt]
+    \win{$+$ recipe: every family snaps to $\approx$ the standard} ($0.015$--$0.025$), across all six.
   \end{column}
   \end{columns}
   \vspace{0.3em}
   \win{Take-away:} on real scanned geometry a physics-residual recipe is \emph{necessary}, and it is
-  \emph{architecture-agnostic} --- a clean, general result.
+  \emph{architecture-agnostic}: a clean, general result.
 \end{frame}
 
-\begin{frame}{Result 2 --- where does learning actually pay off?}
+\begin{frame}{Result 2: where does learning actually pay off?}
   With every operator now functional, one question remains: \emph{when is the network worth it over
   the free physics prior?} We answer it with the bridge-focused metric.
   \vspace{0.3em}
@@ -352,8 +352,8 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Result 3 --- the inverse twin reads bridges and U back out}
-  Run the differentiable forward \emph{backwards}: given a field, recover the conductivity/bridge map
+\begin{frame}{Result 3: the inverse twin reads bridges and U back out}
+  Run the differentiable forward \emph{backwards}: given a field, recover the conductivity / bridge map
   and the per-surface U-value.
   \vspace{0.2em}
   \begin{center}\small
@@ -369,24 +369,24 @@
   \end{center}
   \vspace{0.2em}
   \begin{itemize}\footnotesize
-    \item \textbf{Baseline:} a naive optimization inverse --- it \emph{fits} the field but recovers the
+    \item \textbf{Baseline:} a naive optimization inverse. It \emph{fits} the field but recovers the
           \bad{wrong} properties (error $>1$, worse than guessing clear wall), because the inverse is
           \textbf{non-unique}.
-    \item \win{Our learned inverse resolves this ill-posedness} (recovery error $0.2$--$0.6$) --- and on
+    \item \win{Our learned inverse resolves this ill-posedness} (recovery error $0.2$--$0.6$), and on
           real geometry it flags bridges at \win{$88$--$92\%$ precision} (when it says ``bridge,'' it is right).
-    \item U-values recovered accurately; on real walls U $\approx$ clear-wall, so the inverse's real
+    \item U-values are recovered accurately; on real walls U $\approx$ clear-wall, so the inverse's real
           content is \emph{the bridges}.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Result 4 --- the twin knows when to trust itself}
+\begin{frame}{Result 4: the twin knows when to trust itself}
   An estimate without uncertainty is not actionable for an engineer. A learned \textbf{uncertainty
   head} predicts a confidence at every point.
   \vspace{0.2em}
   \begin{center}\small
   \begin{tabular}{@{}lcc@{}}
     \toprule
-    & $1\sigma$ coverage (ideal $\approx 0.68$) & error--uncertainty corr. \\
+    & $1\sigma$ coverage (ideal $\approx 0.68$) & error-uncertainty corr. \\
     \midrule
     \win{Learned head (synthetic)}      & \win{\textbf{0.69--0.72}} & \win{\textbf{0.64--0.80}} \\
     Learned head (real geometry)        & 0.92--0.97 (conservative) & 0.44--0.63 \\
@@ -396,28 +396,28 @@
   \end{center}
   \vspace{0.2em}
   \begin{itemize}\footnotesize
-    \item \textbf{Baseline:} naive ensemble uncertainty --- coverage $0.18$--$0.36$, far from the ideal $0.68$.
+    \item \textbf{Baseline:} naive ensemble uncertainty, with coverage $0.18$--$0.36$, far from the ideal $0.68$.
     \item \win{Our learned head is well-calibrated} (coverage matches the ideal on synthetic;
-          conservative but coherent on real) --- a decisive improvement over the baseline.
-    \item Bonus: the uncertainty map doubles as a \emph{bridge-reliability indicator} --- it lights up
+          conservative but coherent on real): a decisive improvement over the baseline.
+    \item Bonus: the uncertainty map doubles as a \emph{bridge-reliability indicator}; it lights up
           where the prior is least trustworthy.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Result 5 --- validation against measured reality}
+\begin{frame}{Result 5: validation against measured reality}
   The chain is trained on simulated fields; these are the independent, \emph{measured} checks.
   \begin{itemize}\small
     \item \textbf{Twin Houses} (in-situ U-values): per-element \win{U-MAE $=0.004\unit{W/m^2K}$},
-          8 of 9 elements exact --- the one miss is a roof rafter, a real bridge the 1-D standard cannot see.
+          8 of 9 elements exact. The one miss is a roof rafter, a real bridge the 1-D standard cannot see.
     \item \textbf{ThermoScenes} (calibrated ${}^{\circ}$C facade field): a geometry-local model explains
           \win{$\sim$63\%} of the measured field; the localized residual ($\sigma\approx0.66\unit{K}$)
-          \emph{is} the thermal-bridge signal --- precisely the inverse target.
+          \emph{is} the thermal-bridge signal, precisely the inverse target.
     \item \textbf{TUM2TWIN-TIR} (airborne IR): measured heat-loss anomalies land \win{$2.1\times$} more on
           the modelled envelopes than off them.
   \end{itemize}
   \vspace{0.2em}
   \begin{block}{Plus: speed}
-    The twin predicts a field in \win{$\sim$2\,ms} vs a finite-volume solve of seconds to $\sim$30\,s ---
+    The twin predicts a field in \win{$\sim$2\,ms} versus a finite-volume solve of seconds to $\sim$30\,s:
     up to $\sim$$10^{4}\times$ faster. City-scale and interactive retrofit become possible.
   \end{block}
 \end{frame}
@@ -428,20 +428,20 @@
 \begin{frame}{Contribution and novelty}
   \begin{block}{The contribution is the \emph{system}}
     The first \textbf{end-to-end, geometry-resolved neural thermal twin of building envelopes}:
-    \;scan $\to$ thermal field $\to$ inverse recovery of per-surface U-values and thermal bridges,
-    with calibrated uncertainty --- on \emph{real as-built} geometry. The forward and inverse research
+    \;scan to thermal field to inverse recovery of per-surface U-values and thermal bridges,
+    with calibrated uncertainty, on \emph{real as-built} geometry. The forward and inverse research
     streams have never been joined here.
   \end{block}
   Within it, three findings stand on their own:
   \begin{enumerate}\small
-    \item A \textbf{physics-residual recipe} is necessary --- and architecture-agnostic --- for neural
-          operators on real scanned geometry (rescues all six families).
+    \item A \textbf{physics-residual recipe} is necessary, and architecture-agnostic, for neural
+          operators on real scanned geometry (it rescues all six families).
     \item Learned operators add value \textbf{in proportion to thermal-bridge severity}; the physics prior
           is the right workhorse for the bulk.
     \item A \textbf{learned inverse resolves the ill-posedness} of property recovery that pure
-          optimization cannot --- with \emph{calibrated} uncertainty.
+          optimization cannot, with \emph{calibrated} uncertainty.
   \end{enumerate}
-  \centerline{\textbf{Target venue: \emph{Automation in Construction}} --- a construction-automation contribution.}
+  \centerline{\textbf{Target venue: \emph{Automation in Construction}} (a construction-automation contribution).}
 \end{frame}
 
 \begin{frame}{Honest limitations and next steps}
@@ -455,24 +455,24 @@
   \end{itemize}
   \vspace{0.3em}
   \begin{block}{Roadmap to the paper}
-    Credible bridge GT $\to$ measured-field inverse $\to$ retrofit what-if demonstration
-    $\to$ \emph{Automation in Construction} submission.
+    Credible bridge GT, then measured-field inverse, then a retrofit what-if demonstration,
+    then the \emph{Automation in Construction} submission.
   \end{block}
 \end{frame}
 
 \begin{frame}{In summary}
   \begin{itemize}
     \item We turn an \textbf{as-built scan} into a \textbf{quantitative thermal twin} of a building
-          envelope --- bridging the simulator's accuracy and the surrogate's speed.
+          envelope, bridging the simulator's accuracy and the surrogate's speed.
     \item We showed a \textbf{physics-residual recipe} makes \emph{every} neural operator work on real
           geometry, \textbf{mapped} where learning pays off, built an \textbf{inverse} that recovers
           thermal bridges and U-values, made it \textbf{uncertainty-aware}, and \textbf{validated}
           against measured data.
     \item The result is the \textbf{first end-to-end geometry-resolved thermal twin} of building
-          envelopes --- the contribution we take to \emph{Automation in Construction}.
+          envelopes: the contribution we take to \emph{Automation in Construction}.
   \end{itemize}
   \vspace{0.5em}
-  \centerline{\large Thank you --- questions welcome.}
+  \centerline{\large Thank you. Questions welcome.}
 \end{frame}
 
 \end{document}
