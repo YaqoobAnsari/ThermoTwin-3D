@@ -119,17 +119,34 @@ mask stability **~0.99**; data-fit rel-L2 0.72–0.76 (`results/inverse_thermosc
 Honest scope, stated in the outputs: relative source localisation, convergent (not held-out-label)
 validation, **not** absolute U — the dataset ships no conductivity, materials or air temperatures.
 
-**3. Identifiability — instrumented; headline GPU run queued (Exp 3).**
-`benchmark_inverse.py --identifiability` now stores the recovered conductivity field, its
-per-point ensemble spread, the true field, the through-wall position and the distance to the
-nearest bridge per validation block, and adds (a) an integration-scale U decomposition over
-indoor-face slab widths, (b) an **observation-masking sweep** (recover from surface-only /
-interior / full and score over the whole field — the clean identifiability lever, since axis-0 is
-through-wall), and (c) a per-point UQ-vs-error correlation. `scripts/analyze_identifiability.py`
-turns the dump into the practitioner-facing figure + `results/identifiability_<corpus>.json`.
-Smoke-validated end-to-end (box, CPU); the headline run is `sbatch scripts/slurm/inverse.slurm
-hard` (job 26646524, queued). The quantified "integrals (U, Ψ) recover, the full field does not,
-and the UQ tracks the non-uniqueness" statement lands on completion.
+**3. Identifiability — quantified (Exp 3).** `benchmark_inverse.py --identifiability` stores the
+recovered conductivity field, its per-point ensemble spread, the true field, the through-wall
+position and the distance to the nearest bridge per validation block, and adds an integration-scale
+U decomposition, an **observation-masking sweep** (recover from surface-only / interior / full,
+scored over the whole field — the clean lever, since axis-0 is through-wall), and a per-point
+UQ-vs-error correlation; `scripts/analyze_identifiability.py` produces the figure +
+`results/identifiability_hard.json`. The headline run (`hard`, severe bridges) makes the boundary
+concrete:
+- **Integrals recover, the full field does not.** Point-level recovered-field rel-L2 ≈ **1.16**
+  (the optimization inverse lands *worse* than the clear-wall init — the per-point field is
+  non-identifiable from θ), while the **U-MAE is 0.044–0.053 W/m²K (MAPE 11–14%)** and is stable
+  across face-band and observation. The recoverable content is the integral, not the field.
+- **Depth.** Per-point recovery error is **0.31 near the observed indoor surface vs 0.43 in the
+  interior**, rising monotonically into the wall — you can read back what the surface flux pins,
+  not the deep field.
+- **What observing the interior buys.** Recovering from surface-only vs interior/full raises
+  bridge-localisation IoU from **0.03 → 0.09–0.10** (≈3×) while U-MAE stays ~0.04 throughout. (This
+  sweep uses the *optimization* inverse, which is non-unique — the *amortized* inverse reaches IoU
+  0.51; the point here is the observation lever, not the absolute IoU.)
+- **UQ tracks the non-uniqueness, but under-disperses.** Ensemble spread vs recovery error
+  correlates positively (Spearman **0.49**), yet 1σ coverage is **0.38** (ideal 0.68) — the
+  optimization-ensemble UQ is under-confident-calibrated exactly as flagged above, which is why the
+  learned heteroscedastic reliability head is the fix.
+
+Evidence: `results/inverse_hard.json` (identifiability block), `results/identifiability_hard.json`,
+`results/figures/identifiability_hard.png`; per-point field dump `inverse_fields_hard.npz`
+(regenerable, not committed). Smoke-validated on box; headline run `sbatch
+scripts/slurm/inverse.slurm hard`.
 
 Net effect for AiC: the systems contribution now ships with an independently-validated GT engine,
 a measured-data demonstration of the inverse, and a quantified identifiability envelope — the

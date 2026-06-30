@@ -162,7 +162,7 @@ def main() -> None:
             ax[0, 1].fill_between(dc[ok], (d_err - d_sem)[ok], (d_err + d_sem)[ok], color="C4", alpha=0.2)
         ax[0, 1].set_xlabel("distance to nearest true bridge")
         ax[0, 1].set_ylabel("recovery error |delta log k|")
-        ax[0, 1].set_title("(2) error concentrates at bridge cores", fontsize=10)
+        ax[0, 1].set_title("(2) recovery error vs distance to bridge", fontsize=10)
 
         # 3. UQ: spread vs error (binned + scatter subsample)
         ss = slice(None, None, max(1, s.size // 4000))
