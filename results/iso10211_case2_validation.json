@@ -1,0 +1,118 @@
+{
+  "case": "ISO 10211:2007 Case 2 (2-D material thermal bridge)",
+  "source": "Blocon HEAT2/HEAT3 validation report (reproduces ISO 10211 reference values)",
+  "grid": [
+    2000,
+    190
+  ],
+  "tol_K": 0.1,
+  "tol_Q_W_per_m": 0.1,
+  "max_temp_err_K": 0.039,
+  "heat_flow_in_W_per_m": 9.4907,
+  "heat_flow_out_W_per_m": 9.4907,
+  "heat_flow_ref_W_per_m": 9.5,
+  "heat_flow_err_W_per_m": 0.0093,
+  "energy_balance_W_per_m": -0.0,
+  "points": [
+    {
+      "point": "A",
+      "xy": [
+        0.0,
+        0.0475
+      ],
+      "kind": "top",
+      "ref_C": 7.1,
+      "computed_C": 7.063,
+      "abs_err_K": 0.037
+    },
+    {
+      "point": "B",
+      "xy": [
+        0.5,
+        0.0475
+      ],
+      "kind": "top",
+      "ref_C": 0.8,
+      "computed_C": 0.761,
+      "abs_err_K": 0.039
+    },
+    {
+      "point": "C",
+      "xy": [
+        0.0,
+        0.0415
+      ],
+      "kind": "bulk",
+      "ref_C": 7.9,
+      "computed_C": 7.896,
+      "abs_err_K": 0.004
+    },
+    {
+      "point": "D",
+      "xy": [
+        0.015,
+        0.0415
+      ],
+      "kind": "bulk",
+      "ref_C": 6.3,
+      "computed_C": 6.325,
+      "abs_err_K": 0.025
+    },
+    {
+      "point": "E",
+      "xy": [
+        0.5,
+        0.0415
+      ],
+      "kind": "bulk",
+      "ref_C": 0.8,
+      "computed_C": 0.828,
+      "abs_err_K": 0.028
+    },
+    {
+      "point": "F",
+      "xy": [
+        0.0,
+        0.0365
+      ],
+      "kind": "bulk",
+      "ref_C": 16.4,
+      "computed_C": 16.408,
+      "abs_err_K": 0.008
+    },
+    {
+      "point": "G",
+      "xy": [
+        0.015,
+        0.0365
+      ],
+      "kind": "bulk",
+      "ref_C": 16.3,
+      "computed_C": 16.333,
+      "abs_err_K": 0.033
+    },
+    {
+      "point": "H",
+      "xy": [
+        0.0,
+        0.0
+      ],
+      "kind": "bottom",
+      "ref_C": 16.8,
+      "computed_C": 16.767,
+      "abs_err_K": 0.033
+    },
+    {
+      "point": "I",
+      "xy": [
+        0.5,
+        0.0
+      ],
+      "kind": "bottom",
+      "ref_C": 18.3,
+      "computed_C": 18.334,
+      "abs_err_K": 0.034
+    }
+  ],
+  "pass": true
+}

@@ -11,5 +11,6 @@
   "mean_err_K": 0.00011783500427084933,
   "corner_note": "singularity at (0,8); ISO scores at 1 m grid points and away from it",
   "pass": true,
-  "a2_a4": "deferred: material thermal-bridge cases need the standard's exact figures"
+  "case2": "passed separately (scripts/validate_iso10211_case2.py): 2-D metal thermal bridge",
+  "case3_4": "deferred: 3-D corner / iron-bar cases (coupling coefficients)"
 }

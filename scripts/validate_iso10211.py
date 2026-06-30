@@ -15,8 +15,10 @@ of a published table). The case has a corner singularity at (0, 8) where the 0 C
 boundaries meet; ISO scores at 1 m grid-points, and we report both the full-field error and the
 error away from that corner.
 
-ISO 10211 cases A.2-A.4 (material thermal-bridge details) require the standard's exact 2-D/3-D
-geometry figures and are a documented follow-up.
+ISO 10211 Case 2 (the 2-D *material* thermal-bridge benchmark with a metal bridge) is validated
+separately in `scripts/validate_iso10211_case2.py` (passes: all nine reference temperatures within
+0.039 K, heat flow within 0.009 W/m). Cases 3-4 are 3-D (a wall/floor corner scored by thermal
+coupling coefficients; an iron bar through insulation) and remain a documented follow-up.
 
     python scripts/validate_iso10211.py
 """
@@ -81,7 +83,8 @@ def main() -> None:
         "mean_err_K": float(err.mean()),
         "corner_note": "singularity at (0,8); ISO scores at 1 m grid points and away from it",
         "pass": bool(err[away].max() < TOL),
-        "a2_a4": "deferred: material thermal-bridge cases need the standard's exact figures",
+        "case2": "passed separately (scripts/validate_iso10211_case2.py): 2-D metal thermal bridge",
+        "case3_4": "deferred: 3-D corner / iron-bar cases (coupling coefficients)",
     }
     odir = _REPO / "results"
     odir.mkdir(parents=True, exist_ok=True)
