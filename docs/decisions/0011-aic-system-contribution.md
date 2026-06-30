@@ -143,9 +143,14 @@ concrete:
   optimization-ensemble UQ is under-confident-calibrated exactly as flagged above, which is why the
   learned heteroscedastic reliability head is the fix.
 
-Evidence: `results/inverse_hard.json` (identifiability block), `results/identifiability_hard.json`,
-`results/figures/identifiability_hard.png`; per-point field dump `inverse_fields_hard.npz`
-(regenerable, not committed). Smoke-validated on box; headline run `sbatch
+Corroborated across corpora: the same pattern holds on real CityGML geometry (`realcg`,
+`realcg_lod3`: near-clear-wall, U-MAE **0.001-0.005**, field rel-L2 $\sim$1.0) and on axis-aligned
+`box` (simplest, hence the most field-recoverable: rel-L2 **0.46**, U-MAE 0.034). Integrals recover
+everywhere; the full field never does.
+
+Evidence: `results/inverse_{hard,realcg,realcg_lod3,box}.json` (identifiability block),
+`results/identifiability_{hard,realcg,realcg_lod3,box}.json` + figures; per-point field dumps
+`inverse_fields_*.npz` (regenerable, not committed). Headline run `sbatch
 scripts/slurm/inverse.slurm hard`.
 
 Net effect for AiC: the systems contribution now ships with an independently-validated GT engine,
