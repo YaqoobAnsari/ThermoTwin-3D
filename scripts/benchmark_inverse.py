@@ -34,6 +34,7 @@ from thermotwin.calibration.inverse import (  # noqa: E402
     uq_calibration,
 )
 from thermotwin.data.pointcloud_dataset import PointCloudDataset, collate_pointcloud  # noqa: E402
+from thermotwin.eval.bridge_metrics import bridge_focused_metrics  # noqa: E402
 from thermotwin.eval.building import u_from_indoor_face_cloud, u_value_report  # noqa: E402
 from thermotwin.eval.metrics import relative_l2  # noqa: E402
 from thermotwin.models.pointnet2 import build_delta_pointnet2, build_pointnet2  # noqa: E402
@@ -47,6 +48,11 @@ CORPORA = {
 }
 LATENT_GRID = 16
 U_FACE_BAND = 0.08
+# Identifiability study (Exp 3): is the *full field* recoverable, or only the integrals (U, Ψ)?
+U_BANDS = (0.04, 0.08, 0.16)   # indoor-face slab widths -> integration-scale decomposition of U
+BRIDGE_MARGIN = 0.25           # logk departure that defines a "bridge" point (matches bridge_localization)
+OBS_MASKS = ("full", "surface", "interior")  # observation lever: what does seeing the interior buy?
+INTERIOR_X = 0.2               # "interior" observation = points deeper than this through-wall coord
 # Optimization-inverse regularisation variants (l1=sparsity, l2=stay-near-clear, tv=smoothness).
 REG_VARIANTS = {
     "opt_none": dict(l1=0.0, l2=1e-3, tv=0.0),
@@ -126,6 +132,30 @@ def _metrics(logk_hat, logk_true, clear_ref, theta_obs, fwd, u_true, prior_np, p
     return m
 
 
+def _obs_index(points_x, mask_type, band, device):
+    """Indices of the *observed* points for an observation-masking variant.
+
+    The identifiability lever: solve the same inverse but only let the data-fit see a subset of
+    the field. ``surface`` = the indoor-face slab (the realistic IR view), ``interior`` = the
+    deep points, ``full`` = everything. The recovered field is still scored over the *whole*
+    domain, so this measures what observing the interior actually buys.
+    """
+    if mask_type == "surface":
+        m = points_x < band
+    elif mask_type == "interior":
+        m = points_x > INTERIOR_X
+    else:  # full
+        m = np.ones_like(points_x, dtype=bool)
+    return torch.as_tensor(np.nonzero(m)[0], device=device, dtype=torch.long)
+
+
+def _masked_forward(fwd, idx):
+    """Wrap a forward closure so its output (and thus the data-fit) is restricted to ``idx``."""
+    def f(logk):
+        return fwd(logk).reshape(-1)[idx]
+    return f
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--corpus", choices=list(CORPORA), default="hard")
@@ -136,6 +166,8 @@ def main():
     p.add_argument("--ensemble", type=int, default=4)
     p.add_argument("--seed", type=int, default=1337)
     p.add_argument("--device", default="cuda")
+    p.add_argument("--no-identifiability", dest="identifiability", action="store_false",
+                   help="skip the Exp-3 identifiability study (field storage + obs-masking + U-bands)")
     a = p.parse_args()
     device = a.device if (a.device == "cpu" or torch.cuda.is_available()) else "cpu"
     tr_root, va_root = CORPORA[a.corpus]
@@ -162,6 +194,11 @@ def main():
     variants = list(REG_VARIANTS) + ["amortized", "hybrid", "opt_sparse_smooth_ens"]
     acc = {v: [] for v in variants}
     uq_acc = []
+    # Exp-3 identifiability accumulators.
+    fields_rows: list[dict] = []          # per-point storage (concatenated at the end)
+    mask_acc = {mt: [] for mt in OBS_MASKS}  # observation-masking recovery
+    uband_rows: list[dict] = []           # multi-band U from the recovered field
+    bf_acc: list[dict] = []               # bridge-focused correction metrics on theta_rec
     loader = DataLoader(val_ds, batch_size=1, shuffle=False, collate_fn=collate_pointcloud)
     for b in loader:
         fwd = _forward_fn(fwd_model, b, device)
@@ -207,6 +244,56 @@ def main():
         acc["opt_sparse_smooth_ens"].append(_metrics(mean, logk_true, clear_ref, theta_obs_np, fwd, **common))
         uq_acc.append(uq_calibration(mean, std, logk_true))
 
+        if not a.identifiability:
+            continue
+        # ---- Exp 3: identifiability study --------------------------------------------------
+        # Canonical recovered field = the ensemble mean (full obs); std = ensemble spread.
+        lk_hat = mean.reshape(-1)
+        with torch.no_grad():
+            theta_rec = fwd(lk_hat).reshape(-1).cpu().numpy()
+        # (a) integration-scale: U recovered at several indoor-face slab widths.
+        urow = {"u_true": u_true}
+        for bnd in U_BANDS:
+            urow[f"u_rec_b{bnd}"] = u_from_indoor_face_cloud(theta_rec, prior_np, points_np, u_clear, band=bnd)
+        uband_rows.append(urow)
+        # correction skill of the recovered field on the bridge region (theta space).
+        bf_acc.append(bridge_focused_metrics(theta_rec, theta_obs_np, prior_np))
+        # (c) per-point storage for the UQ-vs-error correlation + recovery-vs-position curves.
+        x_tw = points_np[:, 0]
+        true_b = (logk_true - clear_ref) > BRIDGE_MARGIN
+        if bool(true_b.any()):
+            dist = torch.cdist(coords, coords[true_b]).min(dim=1).values.cpu().numpy()
+        else:
+            dist = np.full(coords.shape[0], np.nan, dtype=np.float32)
+        sid = len(fields_rows)
+        fields_rows.append({
+            "sample_id": np.full(x_tw.shape, sid, dtype=np.int32),
+            "logk_true": logk_true.cpu().numpy().astype(np.float32),
+            "logk_hat": lk_hat.cpu().numpy().astype(np.float32),
+            "logk_std": std.reshape(-1).cpu().numpy().astype(np.float32),
+            "x_throughwall": x_tw.astype(np.float32),
+            "dist_to_bridge": dist.astype(np.float32),
+            "clear_ref": np.full(x_tw.shape, clear_ref, dtype=np.float32),
+        })
+        # (b) observation masking: same inverse config, observation restricted to a subset.
+        reg_sm = REG_VARIANTS["opt_sparse_smooth"]
+        for mt in OBS_MASKS:
+            oidx = _obs_index(x_tw, mt, U_FACE_BAND, device)
+            if oidx.numel() == 0:
+                continue  # e.g. realcg has no indoor-face points -> no "surface" view
+            lk_m = optimize_inverse(_masked_forward(fwd, oidx), theta_obs_t[oidx], logk_clear,
+                                    clear_ref, n_steps=a.inv_steps, lr=a.inv_lr, tv_edges=edges, **reg_sm)
+            with torch.no_grad():
+                th_m = fwd(lk_m).reshape(-1).cpu().numpy()
+            row = {
+                "logk_rel_l2": float(torch.linalg.norm(lk_m - logk_true) / (torch.linalg.norm(logk_true) + 1e-9)),
+                "n_obs": int(oidx.numel()),
+                "u_rec": u_from_indoor_face_cloud(th_m, prior_np, points_np, u_clear, band=U_FACE_BAND),
+                "u_true": u_true,
+            }
+            row.update(bridge_localization(lk_m, logk_true, clear_ref))
+            mask_acc[mt].append(row)
+
     # Aggregate.
     def agg(rows):
         keys = [k for k in rows[0] if isinstance(rows[0][k], (int, float))]
@@ -235,12 +322,47 @@ def main():
           f"cov2σ={uq.get('uq_cov_2sigma_mean', float('nan')):.2f} "
           f"err-σ corr={uq.get('uq_err_std_corr_mean', float('nan')):.2f}", flush=True)
 
+    out_dict = {"config": vars(a), "forward_train_s": t_fwd, "variants": results, "uq": uq}
+
+    # ---- Exp 3: identifiability summary + per-point field dump -----------------------------
+    if a.identifiability and fields_rows:
+        uband = {}
+        utru = np.array([r["u_true"] for r in uband_rows])
+        for bnd in U_BANDS:
+            rec = np.array([r[f"u_rec_b{bnd}"] for r in uband_rows])
+            rep = u_value_report(rec, utru)
+            uband[f"u_mae_b{bnd}"] = rep["u_mae"]
+            uband[f"u_mape_b{bnd}"] = rep["u_mape"]
+        obs = {}
+        for mt, rows in mask_acc.items():
+            if not rows:
+                continue
+            obs[mt] = agg(rows)
+            obs[mt]["u_mae"] = u_value_report(
+                np.array([r["u_rec"] for r in rows]), np.array([r["u_true"] for r in rows])
+            )["u_mae"]
+            obs[mt]["n_obs_mean"] = float(np.mean([r["n_obs"] for r in rows]))
+        out_dict["identifiability"] = {
+            "u_bands": uband, "bridge_focused": agg(bf_acc), "observation": obs,
+        }
+        cat = {k: np.concatenate([r[k] for r in fields_rows]) for k in fields_rows[0]}
+        npz = _REPO / "results" / f"inverse_fields_{a.corpus}.npz"
+        npz.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(npz, **cat)
+        print(f"[{a.corpus}/IDENT] U-MAE by face-band  " +
+              "  ".join(f"{b}:{uband[f'u_mae_b{b}']:.4f}" for b in U_BANDS), flush=True)
+        for mt in OBS_MASKS:
+            if obs.get(mt):
+                o = obs[mt]
+                print(f"  obs={mt:8s} n~{int(o['n_obs_mean']):5d}  "
+                      f"logk_relL2={o.get('logk_rel_l2_mean', float('nan')):.3f}  "
+                      f"bridgeIoU={o.get('bridge_iou_mean', float('nan')):.2f}  "
+                      f"U-MAE={o['u_mae']:.4f}", flush=True)
+        print(f"wrote {npz}", flush=True)
+
     out = _REPO / "results" / f"inverse_{a.corpus}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({
-        "config": vars(a), "forward_train_s": t_fwd,
-        "variants": results, "uq": uq,
-    }, indent=2, default=str))
+    out.write_text(json.dumps(out_dict, indent=2, default=str))
     print(f"\nwrote {out}")
 
 

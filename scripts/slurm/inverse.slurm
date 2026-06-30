@@ -2,8 +2,9 @@
 # Inverse-twin benchmark on a Block-2 corpus: train a frozen differentiable forward surrogate,
 # then recover the conductivity / thermal-bridge field from observed theta three ways
 # (optimization / amortized / hybrid) with regularisation + ensemble-UQ variants. Scores field
-# recovery, bridge localisation (P/R/IoU), U-MAE, and UQ calibration. Writes
-# results/inverse_<corpus>.json.
+# recovery, bridge localisation (P/R/IoU), U-MAE, and UQ calibration. Also runs the Exp-3
+# identifiability study (observation masking + integration-scale U + per-point field dump).
+# Writes results/inverse_<corpus>.json and results/inverse_fields_<corpus>.npz.
 #
 #   sbatch scripts/slurm/inverse.slurm <corpus>      # corpus: hard | realcg | realcg_lod3 | box
 #
