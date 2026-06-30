@@ -15,6 +15,8 @@
 \newcommand{\win}[1]{{\color{green!55!black}\textbf{#1}}}
 \newcommand{\bad}[1]{{\color{red!65!black}#1}}
 \newcommand{\unit}[1]{\,\mathrm{#1}}
+% Shrink a box to the available width ONLY if it is too wide (never enlarges; keeps aspect).
+\newcommand{\fittable}[1]{\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{#1}}
 
 \title[ThermoTwin-3D]{ThermoTwin-3D}
 \subtitle{A geometry-resolved thermal twin of building envelopes from as-built scans}
@@ -103,7 +105,7 @@
 
 \begin{frame}{The trade-off, side by side}
   \centering\small
-  \begin{tabular}{@{}lcccc@{}}
+  \fittable{\begin{tabular}{@{}lcccc@{}}
     \toprule
     & \textbf{RC / lumped} & \textbf{FEM / EnergyPlus} & \textbf{Neural operator} & \textbf{Ours} \\
     \midrule
@@ -114,7 +116,7 @@
     Scales to many buildings    & yes        & \bad{no}          & yes                  & \win{yes} \\
     Interpretability            & high       & high              & \bad{low}            & medium (physics-anchored) \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}}
   \vspace{0.7em}
   \begin{block}{Our position}
     Take the \textbf{geometry resolution of a simulator} and the \textbf{speed of a neural operator},
@@ -194,10 +196,15 @@
       \end{itemize}
     \end{column}
   \end{columns}
-  \vspace{0.4em}
+\end{frame}
+
+\begin{frame}{Inputs and outputs, visualized (one envelope surface)}
   \begin{center}
-    \includegraphics[width=0.92\textwidth]{figs/inputs-outputs.png}
+    \includegraphics[width=\textwidth]{figs/inputs-outputs.png}
   \end{center}
+  \vspace{0.2em}
+  \small The same scanned surface, coloured by the two model inputs (geometry plus conductivity,
+  and the analytic 1-D prior field) and by the model output (the temperature field $\theta$).
 \end{frame}
 
 \begin{frame}{The recipe (1/2): what the physics-anchored operator is}
@@ -237,7 +244,7 @@
 
 \begin{frame}{Datasets: synthetic control, real geometry, measured reality}
   \footnotesize
-  \begin{tabular}{@{}lll@{}}
+  \fittable{\begin{tabular}{@{}lll@{}}
     \toprule
     \textbf{Role} & \textbf{Dataset} & \textbf{What it gives} \\
     \midrule
@@ -253,7 +260,7 @@
     \midrule
     Cross-domain benchmark  & Conduction-with-inclusions (WHNO / EIT) & published, sharp-contrast fields \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}}
   \vspace{0.5em}
   \begin{itemize}\footnotesize
     \item Direct corpora carry \emph{simulated} ground-truth fields (we generate them); the measured
@@ -301,7 +308,7 @@
   \begin{columns}[T]
   \begin{column}{0.62\textwidth}
   \centering\scriptsize
-  \begin{tabular}{@{}lcc@{}}
+  \fittable{\begin{tabular}{@{}lcc@{}}
     \toprule
     Backbone & \bad{alone (data-only)} & \win{$+$ recipe} \\
     \midrule
@@ -312,7 +319,7 @@
     PointNet++ (point network)      & 0.224 & \textbf{0.015} \\
     MeshGraphNet (mesh GNN)         & 0.233 & \textbf{0.018} \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}}
   \par\vspace{2pt}\scriptsize field relative-$L_2$ (lower is better)
   \end{column}
   \begin{column}{0.38\textwidth}\scriptsize
@@ -332,7 +339,7 @@
   the free physics prior?} We answer it with the bridge-focused metric.
   \vspace{0.3em}
   \begin{center}\small
-  \begin{tabular}{@{}lcc@{}}
+  \fittable{\begin{tabular}{@{}lcc@{}}
     \toprule
     Regime & correction rel-$L_2$ & vs.\ the prior (standard $=1.0$) \\
     \midrule
@@ -340,7 +347,7 @@
     Real clear-wall envelopes (CityGML)    & 0.88--0.92 & $\sim$10\% better \\
     Near-ideal walls (DOE)                 & $\approx 1.0$ & prior already optimal \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}}
   \end{center}
   \vspace{0.3em}
   \begin{itemize}\small
@@ -357,7 +364,7 @@
   and the per-surface U-value.
   \vspace{0.2em}
   \begin{center}\small
-  \begin{tabular}{@{}lccc@{}}
+  \fittable{\begin{tabular}{@{}lccc@{}}
     \toprule
     Recovery target & severe (``hard'') & real-CityGML & LoD3 \\
     \midrule
@@ -365,7 +372,7 @@
     \quad precision / recall        & 0.57 / 0.74 & \textbf{0.92} / 0.44 & \textbf{0.88} / 0.33 \\
     Per-surface U-MAE (W/m$^2$K)    & $\sim$0.04 & 0.001--0.002 & 0.002 \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}}
   \end{center}
   \vspace{0.2em}
   \begin{itemize}\footnotesize
@@ -384,7 +391,7 @@
   head} predicts a confidence at every point.
   \vspace{0.2em}
   \begin{center}\small
-  \begin{tabular}{@{}lcc@{}}
+  \fittable{\begin{tabular}{@{}lcc@{}}
     \toprule
     & $1\sigma$ coverage (ideal $\approx 0.68$) & error-uncertainty corr. \\
     \midrule
@@ -392,7 +399,7 @@
     Learned head (real geometry)        & 0.92--0.97 (conservative) & 0.44--0.63 \\
     \bad{Naive ensemble (baseline)}     & \bad{0.18--0.36 (badly off)} & \bad{0.07--0.30} \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}}
   \end{center}
   \vspace{0.2em}
   \begin{itemize}\footnotesize
