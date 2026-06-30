@@ -85,3 +85,52 @@ the U-arm validators. Measured-data validation of the inverse is the key remaini
    the trained inverse on a measured 3-D field is the gap to close.
 3. **Identifiability:** surface IR under-determines interior properties; U and Ψ (integrals) are the
    recoverable quantities, and the UQ must honestly reflect the residual non-uniqueness.
+
+## Update 2026-06-30 — the three boundaries, addressed experimentally
+
+Each pre-registered boundary above was turned into an experiment. The goal is not to make the
+boundary disappear (two of them are real and permanent) but to *characterize* it, so a
+building-physics reviewer meets a measured result instead of an unguarded assumption.
+
+**1. GT credibility — closed (Exp 1).** Built an **independent general-boundary reference
+conduction solver** (`src/thermotwin/physics/reference_solver.py`): a genuinely separate
+implementation of the same finite-volume scheme, but with Dirichlet/Robin conditions on any
+face(-region), per-patch flux, and the surface temperature factor `f_Rsi`. Credibility chain:
+- reproduces the **analytic 1-D layered-wall U** with surface films (`tests/test_reference_solver.py`, 6/6);
+- **passes ISO 10211 Case A.1** (the conduction-method validation case) against the closed-form
+  Laplace solution: max error **0.010 K** away from the (0,8) corner singularity, vs the **0.1 K**
+  ISO tolerance (`results/iso10211_validation.json`);
+- **cross-validates the production solver to machine precision** on generated corpus cases
+  (field rel-L2 max **3.2e-15**, U rel-err max **7.4e-14**; `results/solver_crosscheck.json`).
+
+So the simulated bridge GT comes from an engine that is bug-free against an independent solver
+that itself passes the thermal-bridge standard. ISO A.2–A.4 (material thermal-bridge details)
+are deferred — they need the standard's exact 2-D/3-D figures.
+
+**2. Measured-data hand-off — closed (Exp 2).** The differentiable inverse twin now runs
+end-to-end on a **real calibrated 3-D thermal field** (`scripts/inverse_thermoscenes.py`): the
+measured heat-loss residual is modeled as the graph-diffused footprint of a sparse, coherent
+source field (`r ≈ Pᵐ s`, P = row-normalised kNN diffusion on the fused COLMAP facade points),
+and the *same* regularised inverse (sparsity + kNN-TV + ensemble UQ) recovers the sources.
+Validation is **relative and convergent**: the recovered map and an *independent*
+local-statistics detector agree at a matched anomaly fraction — overlap IoU **0.09 / 0.19** on
+BI-building / INR-building, i.e. **×4.3 / ×7.4 over a random-mask null** (mean ×5.8); ensemble
+mask stability **~0.99**; data-fit rel-L2 0.72–0.76 (`results/inverse_thermoscenes/summary.json`).
+Honest scope, stated in the outputs: relative source localisation, convergent (not held-out-label)
+validation, **not** absolute U — the dataset ships no conductivity, materials or air temperatures.
+
+**3. Identifiability — instrumented; headline GPU run queued (Exp 3).**
+`benchmark_inverse.py --identifiability` now stores the recovered conductivity field, its
+per-point ensemble spread, the true field, the through-wall position and the distance to the
+nearest bridge per validation block, and adds (a) an integration-scale U decomposition over
+indoor-face slab widths, (b) an **observation-masking sweep** (recover from surface-only /
+interior / full and score over the whole field — the clean identifiability lever, since axis-0 is
+through-wall), and (c) a per-point UQ-vs-error correlation. `scripts/analyze_identifiability.py`
+turns the dump into the practitioner-facing figure + `results/identifiability_<corpus>.json`.
+Smoke-validated end-to-end (box, CPU); the headline run is `sbatch scripts/slurm/inverse.slurm
+hard` (job 26646524, queued). The quantified "integrals (U, Ψ) recover, the full field does not,
+and the UQ tracks the non-uniqueness" statement lands on completion.
+
+Net effect for AiC: the systems contribution now ships with an independently-validated GT engine,
+a measured-data demonstration of the inverse, and a quantified identifiability envelope — the
+three things a domain reviewer would otherwise press on.
