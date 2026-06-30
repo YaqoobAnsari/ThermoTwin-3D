@@ -42,8 +42,20 @@ We do NOT claim a new residual-learning mechanism. We claim the **join**, the **
 
 **Forward (the engine, honestly framed).** 14-model × 6-corpus gate (ADR 0010): the analytic 1-D
 prior is near-optimal on real clear-wall envelopes; learned operators earn their keep in proportion
-to bridge severity. The delta-prior recipe is the engine, not the contribution. Boundary-layer A/B
-ablation (`results/bl_*.json`, running) tests whether the SDF-keyed window beats plain additive.
+to bridge severity. The delta-prior recipe is the engine, not the contribution.
+
+**Boundary-layer A/B ablation (`results/bl_*.json`, all 7 corpora) — an honest split:**
+- *The SDF-keyed window is a tested-and-REJECTED hypothesis.* It does not measurably beat plain
+  additive residual learning: bridge corr-relL2 Δ ≤ 0.011 on five corpora, a marginal +0.044 only
+  on severe-bridge `hard`, and it *hurts* on axis-aligned `box` (−0.070); `delta_input ≈ bl`
+  everywhere, so the window adds nothing beyond feeding interface-distance as a feature. This
+  documents the Block-2 additive null as a finding: the boundary-layer *structure* does not earn
+  its keep — consistent with its non-novelty.
+- *The uncertainty head is the KEEPER.* The learned heteroscedastic UQ is well-calibrated
+  (1σ coverage 0.69–0.72 ≈ ideal 0.68, err–σ correlation 0.64–0.80 on synthetic; conservative
+  0.92–0.97 on real geometry), **dramatically beating the inverse twin's optimization-ensemble UQ**
+  (1σ coverage 0.18–0.36). Calibrated per-point uncertainty + the reliability map is the
+  non-refutable capability and the fix for the inverse's poorly-calibrated UQ.
 
 **Inverse twin (the headline) — `results/inverse_{hard,realcg,realcg_lod3}.json`:**
 - A **learned amortized inverse recovers the thermal-bridge field** from θ: bridge-localisation
